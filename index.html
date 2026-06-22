@@ -1,0 +1,2004 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0b1410">
+<title>Liga Máster · Edición Mánager</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;500;600;700;800;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================================
+   IDENTIDAD VISUAL
+   Brief: simulador de mánager de fútbol con humor argento. No es un dashboard.
+   Es la sala de prensa / el túnel del estadio a la medianoche.
+   - Display: Anton (condensada, de pizarra táctica / cartel de cancha)
+   - Body: Archivo (grotesca neutra, legible)
+   - Data/relato: Space Mono (tablero, marcador, telemetría)
+   Paleta: verde césped nocturno + cal + un amarillo "tarjeta"/"foco" como acento.
+   Firma: la pizarra táctica donde arrastrás jugadores ES el corazón de la pantalla.
+   ========================================================================== */
+:root{
+  --cesped-0:#0b1410;      /* fondo más oscuro, casi noche */
+  --cesped-1:#0f1c15;
+  --cesped-2:#13261c;
+  --linea:#3f7d54;         /* líneas de cal verdosas */
+  --cal:#eaf3ec;           /* texto cal */
+  --cal-dim:#8fb89c;
+  --foco:#ffd23f;          /* amarillo foco/tarjeta — acento único */
+  --foco-dim:#b8932a;
+  --sangre:#e23b3b;        /* rojo tarjeta / derrota */
+  --hueso:#f4efe2;
+  --azul-var:#3b82f6;
+  --linea-suave:rgba(63,125,84,.28);
+  --panel:#101e17;         /* opaco: se ve igual aunque el navegador ponga fondo claro detrás */
+  --panel-2:#13241b;       /* variante para filas/cards */
+  --panel-borde:rgba(143,184,156,.16);
+  --sombra:0 18px 50px -18px rgba(0,0,0,.7);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%; color-scheme:dark; background:#0b1410;}
+html, body{min-height:100%;}
+body{
+  font-family:'Archivo',system-ui,sans-serif;
+  background:
+    radial-gradient(1200px 600px at 80% -10%, rgba(63,125,84,.18), transparent 60%),
+    radial-gradient(900px 500px at 0% 110%, rgba(255,210,63,.06), transparent 55%),
+    var(--cesped-0);
+  background-color:var(--cesped-0);
+  color:var(--cal);
+  min-height:100vh;
+  line-height:1.45;
+  overflow-x:hidden;
+}
+body::before{ /* textura de césped sutil con rayas de corte */
+  content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.5;
+  background:repeating-linear-gradient(90deg, transparent 0 64px, rgba(255,255,255,.012) 64px 128px);
+}
+.wrap{position:relative;z-index:1;max-width:1180px;margin:0 auto;padding:0 18px 80px;background:var(--cesped-0)}
+
+/* ── BARRA SUPERIOR / MARCADOR DEL CLUB ── */
+.topbar{
+  position:sticky;top:0;z-index:50;
+  margin:0 -18px 0;padding:14px 22px;
+  background:linear-gradient(180deg, rgba(11,20,16,.96), rgba(11,20,16,.82));
+  backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--linea-suave);
+  display:flex;align-items:center;gap:18px;flex-wrap:wrap;
+}
+.crest{
+  width:46px;height:46px;flex:none;border-radius:10px;
+  background:linear-gradient(145deg,var(--cesped-2),var(--cesped-1));
+  border:1px solid var(--linea);
+  display:grid;place-items:center;font-size:24px;
+  box-shadow:inset 0 0 0 2px rgba(255,210,63,.12);
+}
+.club-id{display:flex;flex-direction:column;line-height:1}
+.club-id .nombre{
+  font-family:'Anton',sans-serif;font-size:26px;letter-spacing:.5px;
+  text-transform:uppercase;color:var(--hueso);
+}
+.club-id .sub{font-size:11.5px;color:var(--cal-dim);letter-spacing:1.5px;text-transform:uppercase;margin-top:3px}
+.topbar .spacer{flex:1}
+.stat-chip{
+  display:flex;flex-direction:column;align-items:flex-end;padding:4px 0;min-width:64px;
+}
+.stat-chip .v{font-family:'Space Mono',monospace;font-weight:700;font-size:18px;color:var(--foco)}
+.stat-chip .v.cal{color:var(--cal)}
+.stat-chip .l{font-size:9.5px;letter-spacing:1.5px;text-transform:uppercase;color:var(--cal-dim);margin-top:2px}
+.topbar .botones{display:flex;gap:8px}
+
+/* botones genéricos */
+.btn{
+  font-family:'Archivo',sans-serif;font-weight:700;font-size:13px;letter-spacing:.3px;
+  border:1px solid var(--panel-borde);background:var(--panel);color:var(--cal);
+  padding:9px 15px;border-radius:9px;cursor:pointer;transition:.15s;
+  display:inline-flex;align-items:center;gap:7px;white-space:nowrap;
+}
+.btn:hover{border-color:var(--linea);background:rgba(63,125,84,.14);transform:translateY(-1px)}
+.btn:active{transform:translateY(0)}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.btn.primary{background:var(--foco);color:#1a1206;border-color:var(--foco);font-weight:800}
+.btn.primary:hover{background:#ffdc63;box-shadow:0 8px 24px -8px rgba(255,210,63,.5)}
+.btn.danger{color:var(--sangre);border-color:rgba(226,59,59,.3)}
+.btn.danger:hover{background:rgba(226,59,59,.12);border-color:var(--sangre)}
+.btn.big{font-size:16px;padding:14px 26px;border-radius:11px}
+
+/* ── NAV DE PESTAÑAS estilo "túnel" ── */
+.tabs{display:flex;gap:4px;margin:20px 0 16px;flex-wrap:wrap}
+.tab{
+  font-family:'Anton',sans-serif;font-size:15px;letter-spacing:.6px;text-transform:uppercase;
+  color:var(--cal-dim);background:transparent;border:none;cursor:pointer;
+  padding:11px 18px;border-radius:9px 9px 0 0;position:relative;transition:.15s;
+}
+.tab:hover{color:var(--cal)}
+.tab.activa{color:var(--cesped-0);background:var(--foco)}
+.tab .badge{
+  font-family:'Space Mono';font-size:10px;background:var(--sangre);color:#fff;
+  border-radius:10px;padding:1px 6px;margin-left:6px;vertical-align:middle;font-weight:700;
+}
+
+/* paneles */
+.panel{
+  background:var(--panel);border:1px solid var(--panel-borde);
+  border-radius:14px;padding:18px;box-shadow:var(--sombra);
+}
+.panel h2{
+  font-family:'Anton',sans-serif;font-size:20px;letter-spacing:.5px;text-transform:uppercase;
+  color:var(--hueso);margin-bottom:14px;display:flex;align-items:center;gap:9px;
+}
+.panel h2 .ico{font-size:18px}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.grid-club{display:grid;grid-template-columns:1.05fr .95fr;gap:18px}
+@media(max-width:860px){.grid-2,.grid-club{grid-template-columns:1fr}}
+
+.hidden{display:none!important}
+
+/* ── TABLA DE POSICIONES ── */
+table.liga{width:100%;border-collapse:collapse;font-size:13px}
+table.liga th{
+  font-family:'Space Mono';font-size:10px;letter-spacing:1px;text-transform:uppercase;
+  color:var(--cal-dim);text-align:right;padding:6px 8px;border-bottom:1px solid var(--linea-suave);font-weight:700;
+}
+table.liga th:nth-child(2){text-align:left}
+table.liga td{padding:7px 8px;text-align:right;border-bottom:1px solid rgba(143,184,156,.07);font-family:'Space Mono';font-size:12.5px}
+table.liga td:nth-child(2){text-align:left;font-family:'Archivo';font-weight:600}
+table.liga tr.mio td{color:var(--foco)}
+table.liga tr.mio td:nth-child(2){font-weight:800}
+table.liga tr.zona-copa td:first-child{border-left:3px solid var(--linea)}
+.pos-num{display:inline-block;min-width:18px}
+
+/* ── PLANTEL: tarjetas de jugador ── */
+.jug-list{display:flex;flex-direction:column;gap:8px}
+.jug-card{
+  display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;
+  background:var(--panel-2);border:1px solid var(--panel-borde);
+  border-radius:11px;padding:10px 13px;transition:.15s;
+}
+.jug-card:hover{border-color:var(--linea)}
+.pos-tag{
+  font-family:'Space Mono';font-weight:700;font-size:10px;letter-spacing:.5px;
+  padding:3px 7px;border-radius:6px;text-transform:uppercase;min-width:38px;text-align:center;
+}
+.pos-POR{background:rgba(59,130,246,.18);color:#93c5fd}
+.pos-DEF{background:rgba(16,185,129,.18);color:#6ee7b7}
+.pos-MED{background:rgba(255,210,63,.16);color:#fcd34d}
+.pos-DEL{background:rgba(226,59,59,.16);color:#fca5a5}
+.jug-nombre{font-weight:700;font-size:14px;display:flex;align-items:center;gap:7px}
+.jug-sub{font-size:11px;color:var(--cal-dim);font-family:'Space Mono';margin-top:2px;display:flex;gap:10px;flex-wrap:wrap}
+.mini-stat{display:inline-flex;align-items:center;gap:4px}
+.lesion-pill{font-size:10px;background:rgba(226,59,59,.2);color:#fca5a5;padding:1px 7px;border-radius:8px;font-family:'Space Mono'}
+/* barritas moral/energia */
+.barra{width:46px;height:5px;border-radius:3px;background:rgba(255,255,255,.08);overflow:hidden;display:inline-block;vertical-align:middle}
+.barra > span{display:block;height:100%;border-radius:3px}
+.b-energia > span{background:linear-gradient(90deg,#34d399,#a7f3d0)}
+.b-moral > span{background:linear-gradient(90deg,#fbbf24,#fcd34d)}
+.barra.low > span{background:linear-gradient(90deg,#e23b3b,#fca5a5)!important}
+
+/* mercado */
+.precio{font-family:'Space Mono';font-weight:700;color:var(--foco);font-size:14px}
+.precio.no{color:var(--sangre)}
+.btn.primary .precio{color:#1a1206}
+
+/* relato de partido */
+#relato-overlay, #penales-overlay{
+  position:fixed;inset:0;z-index:200;display:none;
+  background:rgba(6,11,8,.86);backdrop-filter:blur(6px);
+  align-items:center;justify-content:center;padding:20px;
+}
+#relato-overlay.show, #penales-overlay.show{display:flex}
+.relato-box{
+  width:100%;max-width:680px;background:linear-gradient(180deg,var(--cesped-2),var(--cesped-1));
+  border:1px solid var(--linea);border-radius:18px;overflow:hidden;box-shadow:var(--sombra);
+  display:flex;flex-direction:column;max-height:90vh;
+}
+.marcador{
+  display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:14px;
+  padding:18px 22px;background:rgba(0,0,0,.25);border-bottom:1px solid var(--linea-suave);
+}
+.marcador .eq{font-family:'Anton';font-size:21px;text-transform:uppercase;letter-spacing:.5px}
+.marcador .eq.local{text-align:right}
+.marcador .eq.mio{color:var(--foco)}
+.marcador .res{
+  font-family:'Space Mono';font-weight:700;font-size:34px;color:var(--hueso);
+  min-width:108px;text-align:center;letter-spacing:2px;
+}
+.marcador .res.late{animation:late .5s ease}
+@keyframes late{0%{transform:scale(1)}40%{transform:scale(1.28);color:var(--foco)}100%{transform:scale(1)}}
+.minuto-chip{
+  text-align:center;font-family:'Space Mono';font-size:12px;color:var(--cal-dim);
+  padding:8px;letter-spacing:1px;background:rgba(0,0,0,.15);
+}
+.relato-feed{flex:1;overflow-y:auto;padding:8px 20px 16px;display:flex;flex-direction:column;gap:7px}
+.ev{
+  padding:9px 13px;border-radius:10px;font-size:13.5px;line-height:1.4;
+  border-left:3px solid var(--linea-suave);background:rgba(255,255,255,.018);
+  animation:slideIn .35s ease;
+}
+@keyframes slideIn{from{opacity:0;transform:translateX(-12px)}to{opacity:1;transform:none}}
+.ev .min{font-family:'Space Mono';font-size:11px;color:var(--cal-dim);margin-right:8px}
+.ev.gol{border-left-color:var(--foco);background:rgba(255,210,63,.07);font-weight:600}
+.ev.gol-rival{border-left-color:var(--sangre);background:rgba(226,59,59,.06)}
+.ev.penal{border-left-color:var(--azul-var)}
+.ev.roja{border-left-color:var(--sangre);background:rgba(226,59,59,.1)}
+.ev.lesion{border-left-color:#f97316}
+/* comentarios de color y contexto */
+.ev-ambiente{border-left-color:#34d399;background:rgba(52,211,153,.06);font-weight:600}
+.ev-arbitro{border-left-color:#a78bfa;background:rgba(167,139,250,.06)}
+.ev-hinchada{border-left-color:#fbbf24;background:rgba(251,191,36,.04);font-style:italic}
+.ev-clima{border-left-color:#60a5fa;background:rgba(96,165,250,.04);font-style:italic}
+.ev-banco{border-left-color:#94a3b8;font-style:italic}
+.ev-relator{border-left-color:#f472b6;font-style:italic;color:var(--cal)}
+.relato-foot{padding:14px 20px;border-top:1px solid var(--linea-suave);display:flex;justify-content:center;gap:10px}
+
+/* canchita / pizarra táctica */
+.pizarra-wrap{display:flex;flex-direction:column;align-items:center;gap:12px}
+#cancha{
+  width:100%;max-width:420px;aspect-ratio:3/4;border-radius:14px;
+  background:linear-gradient(160deg,#15301f,#0f2417);
+  border:1px solid var(--linea);position:relative;
+  box-shadow:var(--sombra);
+}
+.banco{width:100%;max-width:420px}
+.banco-title{font-family:'Space Mono';font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--cal-dim);margin:4px 0 8px}
+.banco-chips{display:flex;flex-wrap:wrap;gap:7px}
+.ficha-banco{
+  font-size:12px;font-weight:700;padding:7px 11px;border-radius:9px;cursor:grab;
+  background:var(--panel-2);border:1px solid var(--panel-borde);transition:.12s;user-select:none;
+}
+.ficha-banco:hover{border-color:var(--foco)}
+.ficha-banco.dragging{opacity:.4}
+.ficha-banco.lesionado{opacity:.45;cursor:not-allowed;border-color:rgba(226,59,59,.3)}
+
+/* noticias */
+.noticia-card{
+  background:var(--panel-2);border:1px solid var(--panel-borde);border-left:3px solid var(--foco);
+  border-radius:11px;padding:13px 15px;margin-bottom:10px;animation:slideIn .35s ease;
+}
+.noticia-card .head{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.noticia-card .rep{font-weight:800;font-size:12.5px;color:var(--foco)}
+.noticia-card .fecha-tag{font-family:'Space Mono';font-size:10px;color:var(--cal-dim);margin-left:auto;letter-spacing:.5px}
+.noticia-card .cuerpo{font-size:13.5px;line-height:1.5;color:var(--cal)}
+
+/* objetivos dirigencia */
+.objetivo{
+  display:flex;align-items:center;gap:12px;padding:12px 15px;border-radius:11px;
+  background:var(--panel-2);border:1px solid var(--panel-borde);margin-bottom:10px;
+}
+.objetivo .ring{
+  width:42px;height:42px;flex:none;border-radius:50%;display:grid;place-items:center;
+  font-family:'Space Mono';font-weight:700;font-size:13px;
+  border:3px solid var(--linea-suave);
+}
+.objetivo.ok .ring{border-color:#34d399;color:#34d399}
+.objetivo.riesgo .ring{border-color:var(--sangre);color:var(--sangre)}
+.objetivo .txt b{display:block;font-size:14px;margin-bottom:2px}
+.objetivo .txt span{font-size:12px;color:var(--cal-dim)}
+
+/* llaves de copa */
+.bracket{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;align-items:center}
+@media(max-width:700px){.bracket{grid-template-columns:1fr;gap:14px}}
+.bracket-col{display:flex;flex-direction:column;justify-content:space-around;gap:14px;min-height:300px}
+.bracket-col.final-col{justify-content:center}
+.llave{
+  background:var(--panel-2);border:1px solid var(--panel-borde);border-radius:10px;overflow:hidden;
+}
+.llave .lado{
+  padding:9px 12px;font-size:13px;font-weight:700;display:flex;justify-content:space-between;align-items:center;
+}
+.llave .lado:first-child{border-bottom:1px solid var(--linea-suave)}
+.llave .lado.mio{color:var(--foco)}
+.llave .lado.gana{background:rgba(52,211,153,.08)}
+.llave .lado .gol{font-family:'Space Mono';color:var(--cal-dim)}
+.campeon-box{
+  text-align:center;padding:22px;border-radius:14px;margin-top:16px;
+  background:linear-gradient(160deg,rgba(255,210,63,.12),rgba(255,210,63,.02));
+  border:1px solid var(--foco);
+}
+.campeon-box .copa{font-size:46px}
+.campeon-box .nom{font-family:'Anton';font-size:30px;text-transform:uppercase;color:var(--foco);margin-top:6px}
+
+/* selector formación */
+.form-selector{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.form-opt{
+  font-family:'Space Mono';font-weight:700;font-size:13px;padding:8px 13px;border-radius:9px;cursor:pointer;
+  background:var(--panel);border:1px solid var(--panel-borde);transition:.12s;
+}
+.form-opt:hover{border-color:var(--linea)}
+.form-opt.sel{background:var(--foco);color:var(--cesped-0);border-color:var(--foco)}
+.form-desc{font-size:12.5px;color:var(--cal-dim);margin-bottom:14px}
+
+/* dialogo */
+.dialogo-bg{position:fixed;inset:0;z-index:300;background:rgba(6,11,8,.8);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;padding:20px}
+.dialogo-bg.show{display:flex}
+.dialogo{background:linear-gradient(180deg,var(--cesped-2),var(--cesped-1));border:1px solid var(--linea);border-radius:16px;padding:26px;max-width:440px;width:100%;box-shadow:var(--sombra)}
+.dialogo h3{font-family:'Anton';font-size:23px;text-transform:uppercase;color:var(--hueso);margin-bottom:8px}
+.dialogo p{font-size:14px;color:var(--cal-dim);margin-bottom:18px}
+.dialogo input{width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--panel-borde);background:rgba(0,0,0,.25);color:var(--cal);font-size:15px;font-family:'Archivo';margin-bottom:18px}
+.dialogo input:focus{outline:none;border-color:var(--foco)}
+.dialogo .acciones{display:flex;gap:10px;justify-content:flex-end}
+
+.empty{text-align:center;color:var(--cal-dim);font-style:italic;padding:30px 10px;font-size:13.5px}
+
+/* toast */
+/* banner de clásico */
+.clasico-banner{
+  text-align:center;font-family:'Anton',sans-serif;font-size:15px;letter-spacing:1px;
+  padding:9px;color:#1a1206;
+  background:repeating-linear-gradient(45deg,var(--foco) 0 16px,#ffdc63 16px 32px);
+  animation:pulseClasico 1.2s ease-in-out infinite;
+}
+@keyframes pulseClasico{0%,100%{filter:brightness(1)}50%{filter:brightness(1.12)}}
+
+/* overlay de despido */
+#despido-overlay{
+  position:fixed;inset:0;z-index:350;display:none;
+  background:rgba(6,11,8,.92);backdrop-filter:blur(8px);
+  align-items:center;justify-content:center;padding:20px;
+}
+#despido-overlay.show{display:flex;animation:fadeIn .4s ease}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.despido-box{
+  width:100%;max-width:520px;background:linear-gradient(180deg,#2a0f0f,#1a0a0a);
+  border:1px solid var(--sangre);border-radius:18px;overflow:hidden;box-shadow:var(--sombra);
+}
+.despido-box .head{
+  background:var(--sangre);color:#fff;padding:18px 24px;font-family:'Anton';font-size:26px;
+  letter-spacing:1px;text-transform:uppercase;display:flex;align-items:center;gap:12px;
+}
+.despido-box .body{padding:24px}
+.despido-box .foot{padding:0 24px 24px;display:flex;justify-content:center}
+
+/* clasico tag en tabla y fixture */
+.clasico-tag{
+  font-family:'Space Mono';font-size:9px;font-weight:700;color:var(--foco);
+  border:1px solid var(--foco-dim);border-radius:5px;padding:1px 5px;margin-left:6px;letter-spacing:.5px;
+}
+
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);z-index:400;
+  background:var(--cesped-2);border:1px solid var(--linea);color:var(--cal);padding:12px 20px;border-radius:11px;
+  font-size:13.5px;font-weight:600;box-shadow:var(--sombra);opacity:0;transition:.25s;pointer-events:none;max-width:90vw;text-align:center}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-thumb{background:var(--linea-suave);border-radius:5px}
+::-webkit-scrollbar-track{background:transparent}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- BARRA SUPERIOR -->
+  <header class="topbar">
+    <div class="crest">⚽</div>
+    <div class="club-id">
+      <span class="nombre" id="club-nombre">Pilar FC</span>
+      <span class="sub" id="club-dt">DT: —</span>
+    </div>
+    <div class="spacer"></div>
+    <div class="stat-chip"><span class="v" id="stat-plata">$0</span><span class="l">Caja</span></div>
+    <div class="stat-chip"><span class="v cal" id="stat-fecha">1/19</span><span class="l">Fecha</span></div>
+    <div class="stat-chip"><span class="v cal" id="stat-pos">—</span><span class="l">Posición</span></div>
+    <div class="botones">
+      <button class="btn" onclick="J.cambiarNombre()">✍️ Nombre</button>
+      <button class="btn" onclick="J.elegirEstadio()">🏟️ Cancha</button>
+      <button class="btn danger" onclick="J.reiniciar()">↻ Reiniciar</button>
+    </div>
+  </header>
+
+  <!-- PESTAÑAS -->
+  <nav class="tabs" id="tabs">
+    <button class="tab activa" data-tab="club">🏠 Club</button>
+    <button class="tab" data-tab="tactica">📋 Pizarra</button>
+    <button class="tab" data-tab="mercado">🛒 Mercado</button>
+    <button class="tab" data-tab="goleadores">🥇 Goleadores</button>
+    <button class="tab" data-tab="prensa">📰 Prensa</button>
+    <button class="tab" data-tab="copa">🏆 Copa</button>
+  </nav>
+
+  <!-- ── TAB CLUB ── -->
+  <section class="tab-panel" data-panel="club">
+    <div class="grid-club">
+      <div class="panel">
+        <h2><span class="ico">📊</span> Tabla de posiciones</h2>
+        <table class="liga"><thead><tr>
+          <th>#</th><th>Equipo</th><th>Pts</th><th>PJ</th><th>GF</th><th>GC</th><th>DG</th>
+        </tr></thead><tbody id="tabla-body"></tbody></table>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:18px">
+        <div class="panel">
+          <h2><span class="ico">🎯</span> La dirigencia pide</h2>
+          <div id="objetivos-box"></div>
+        </div>
+        <div class="panel">
+          <h2><span class="ico">👕</span> Mi plantel</h2>
+          <div class="jug-list" id="plantel-list"></div>
+          <button class="btn primary big" style="width:100%;margin-top:14px;justify-content:center" id="btn-jugar" onclick="J.jugarFecha()">▶ Jugar la fecha</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── TAB PIZARRA / TÁCTICA ── -->
+  <section class="tab-panel hidden" data-panel="tactica">
+    <div class="grid-2">
+      <div class="panel">
+        <h2><span class="ico">📐</span> Dibujo táctico</h2>
+        <div class="form-selector" id="form-selector"></div>
+        <div class="form-desc" id="form-desc"></div>
+        <div class="pizarra-wrap">
+          <div id="cancha"></div>
+          <div class="banco">
+            <div class="banco-title">Banco · arrastrá a la cancha</div>
+            <div class="banco-chips" id="banco-chips"></div>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <h2><span class="ico">🧮</span> Cómo queda tu equipo</h2>
+        <p style="font-size:13px;color:var(--cal-dim);margin-bottom:16px">
+          La fuerza sale de a quién ponés adelante y a quién atrás. Un crack mal ubicado rinde menos.
+        </p>
+        <div id="fuerza-box"></div>
+        <div style="margin-top:18px;padding-top:16px;border-top:1px solid var(--linea-suave)">
+          <h2 style="font-size:16px"><span class="ico">👔</span> Tu DT</h2>
+          <div id="dt-box"></div>
+        </div>
+        <div style="margin-top:18px;padding-top:16px;border-top:1px solid var(--linea-suave)">
+          <h2 style="font-size:16px"><span class="ico">📈</span> Tu campaña</h2>
+          <div id="campania-box"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── TAB MERCADO ── -->
+  <section class="tab-panel hidden" data-panel="mercado">
+    <div class="panel">
+      <h2><span class="ico">🛒</span> Mercado de pases</h2>
+      <p style="font-size:13px;color:var(--cal-dim);margin-bottom:16px">
+        Hasta 7 jugadores en el plantel. Ojear el mercado cuesta $50.
+      </p>
+      <div class="jug-list" id="mercado-list"></div>
+      <button class="btn" style="margin-top:14px" onclick="J.ojearMercado()">🔍 Ojear mercado ($50)</button>
+    </div>
+  </section>
+
+  <!-- ── TAB GOLEADORES ── -->
+  <section class="tab-panel hidden" data-panel="goleadores">
+    <div class="panel">
+      <h2><span class="ico">🥇</span> Tabla de goleadores</h2>
+      <table class="liga"><thead><tr><th>#</th><th>Jugador</th><th>Equipo</th><th>Goles</th></tr></thead>
+      <tbody id="goleadores-body"></tbody></table>
+    </div>
+  </section>
+
+  <!-- ── TAB PRENSA ── -->
+  <section class="tab-panel hidden" data-panel="prensa">
+    <div class="panel">
+      <h2><span class="ico">📰</span> Sala de prensa</h2>
+      <div id="prensa-feed"></div>
+    </div>
+  </section>
+
+  <!-- ── TAB COPA ── -->
+  <section class="tab-panel hidden" data-panel="copa">
+    <div class="panel">
+      <h2><span class="ico">🏆</span> Copa Máster</h2>
+      <div id="copa-content"></div>
+    </div>
+  </section>
+
+</div>
+
+<!-- OVERLAY RELATO -->
+<div id="relato-overlay">
+  <div class="relato-box">
+    <div class="marcador">
+      <div class="eq local" id="m-local">Local</div>
+      <div class="res" id="m-res">0 - 0</div>
+      <div class="eq" id="m-visita">Visita</div>
+    </div>
+    <div class="minuto-chip" id="m-minuto">Suena el himno...</div>
+    <div class="relato-feed" id="relato-feed"></div>
+    <div class="relato-foot">
+      <button class="btn" id="btn-saltar" onclick="J.saltarRelato()">⏩ Saltar</button>
+      <button class="btn primary hidden" id="btn-cerrar-relato" onclick="J.cerrarRelato()">Continuar ▶</button>
+    </div>
+  </div>
+</div>
+
+<!-- OVERLAY PENALES -->
+<div id="penales-overlay">
+  <div class="relato-box">
+    <div class="minuto-chip" id="p-titulo" style="font-size:15px;color:var(--foco);padding:14px;font-weight:700">⚡ ¡VAMOS A LOS PENALES!</div>
+    <div class="marcador" style="grid-template-columns:1fr auto 1fr">
+      <div class="eq local" id="p-eqA">A</div>
+      <div class="res"><span id="p-marcA">0</span> <span style="color:var(--cal-dim)">-</span> <span id="p-marcB">0</span></div>
+      <div class="eq" id="p-eqB">B</div>
+    </div>
+    <div class="relato-feed" id="penales-feed"></div>
+    <div class="relato-foot">
+      <button class="btn primary hidden" id="btn-cerrar-penales" onclick="J.cerrarPenales()">Continuar ▶</button>
+    </div>
+  </div>
+</div>
+
+<!-- OVERLAY DESPIDO -->
+<div id="despido-overlay">
+  <div class="despido-box">
+    <div class="head">🪑 ¡TE ECHARON!</div>
+    <div class="body" id="despido-cuerpo"></div>
+    <div class="foot">
+      <button class="btn primary big" onclick="J.reiniciarTrasDespido()">Empezar de nuevo ↻</button>
+    </div>
+  </div>
+</div>
+
+<!-- DIALOGO -->
+<div class="dialogo-bg" id="dialogo-bg">
+  <div class="dialogo">
+    <h3 id="dlg-titulo">Título</h3>
+    <p id="dlg-texto">Texto</p>
+    <input id="dlg-input" type="text" autocomplete="off">
+    <div class="acciones">
+      <button class="btn" onclick="J.cerrarDialogo()">Cancelar</button>
+      <button class="btn hidden" id="dlg-extra" onclick="J.dialogoExtra()">🎲 Sortear</button>
+      <button class="btn primary" id="dlg-ok" onclick="J.confirmarDialogo()">Aceptar</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* ============================================================================
+   MOTOR (embebido) — misma lógica testeada en engine.js
+   ========================================================================== */
+const FORMACIONES = {
+  "2-1-2": { slots: ["POR","DEF","DEF","MED","DEL","DEL"], desc:"Equilibrada, clásica del fútbol 5", atk:0,  def:0,  coords:[[.5,.9],[.28,.66],[.72,.66],[.5,.45],[.32,.2],[.68,.2]] },
+  "1-2-2": { slots: ["POR","DEF","MED","MED","DEL","DEL"], desc:"Ofensiva, dos puntas",             atk:12, def:-8, coords:[[.5,.9],[.5,.68],[.3,.46],[.7,.46],[.32,.2],[.68,.2]] },
+  "2-2-1": { slots: ["POR","DEF","DEF","MED","MED","DEL"], desc:"Defensiva, un solo delantero",      atk:-8, def:12, coords:[[.5,.9],[.3,.68],[.7,.68],[.3,.46],[.7,.46],[.5,.2]] },
+  "1-1-3": { slots: ["POR","DEF","MED","DEL","DEL","DEL"], desc:"Ultra ofensiva, o todo o nada",     atk:20, def:-18,coords:[[.5,.9],[.5,.68],[.5,.46],[.24,.2],[.5,.2],[.76,.2]] },
+};
+const DTS = {
+  "Scaloni":{atk:8,def:8,estilo:"equilibrado"}, "Gallardo":{atk:10,def:4,estilo:"ofensivo"},
+  "Bilardo":{atk:-5,def:15,estilo:"defensivo"}, "Menotti":{atk:15,def:-5,estilo:"ofensivo"},
+  "Caruso Lombardi":{atk:2,def:12,estilo:"defensivo"}, "Guardiola":{atk:18,def:5,estilo:"ofensivo"},
+  "Mourinho":{atk:4,def:15,estilo:"defensivo"}, "Sapardo (meme)":{atk:-12,def:-6,estilo:"caótico"},
+  "Becasexi (meme)":{atk:12,def:-8,estilo:"caótico"},
+};
+const BASE_JUGADORES = [
+  // ── LEYENDAS DEL FÚTBOL ──
+  {nombre:"Maradona",pos:"MED",valor:1400,atk:99,def:60},{nombre:"Messi",pos:"DEL",valor:1200,atk:99,def:45},
+  {nombre:"Di Stéfano",pos:"DEL",valor:1000,atk:96,def:55},{nombre:"Kempes",pos:"DEL",valor:820,atk:91,def:40},
+  {nombre:"Riquelme",pos:"MED",valor:900,atk:95,def:30},{nombre:"Tevez",pos:"DEL",valor:750,atk:90,def:35},
+  {nombre:"Batistuta",pos:"DEL",valor:880,atk:94,def:25},{nombre:"Verón",pos:"MED",valor:700,atk:89,def:55},
+  {nombre:"Crespo",pos:"DEL",valor:580,atk:87,def:20},{nombre:"Aimar",pos:"MED",valor:550,atk:88,def:35},
+  {nombre:"Palermo",pos:"DEL",valor:500,atk:85,def:20},{nombre:"Mascherano",pos:"DEF",valor:550,atk:40,def:90},
+  {nombre:"Zanetti",pos:"DEF",valor:500,atk:60,def:92},{nombre:"Heinze",pos:"DEF",valor:420,atk:45,def:88},
+  {nombre:"Ayala",pos:"DEF",valor:480,atk:35,def:91},{nombre:"Samuel",pos:"DEF",valor:460,atk:38,def:89},
+  {nombre:"Sorín",pos:"DEF",valor:400,atk:70,def:80},{nombre:"Cambiasso",pos:"MED",valor:430,atk:72,def:82},
+  {nombre:"Dibu Mtz",pos:"POR",valor:600,atk:10,def:92},{nombre:"Goycochea",pos:"POR",valor:500,atk:8,def:88},
+  {nombre:"Fillol",pos:"POR",valor:520,atk:8,def:90},{nombre:"Chilavert",pos:"POR",valor:540,atk:55,def:88},
+  // ── ÍDOLOS / GLORIAS DEL ASCENSO ──
+  {nombre:"Tanque Silva",pos:"DEL",valor:310,atk:82,def:25},{nombre:"Toranzo",pos:"MED",valor:280,atk:80,def:30},
+  {nombre:"Fattori",pos:"MED",valor:240,atk:65,def:75},{nombre:"Olave",pos:"POR",valor:220,atk:8,def:82},
+  {nombre:"Cristian Pavón",pos:"DEL",valor:420,atk:82,def:22},{nombre:"Licha López",pos:"DEL",valor:450,atk:83,def:30},
+  {nombre:"Pulga Rdz",pos:"MED",valor:350,atk:84,def:25},{nombre:"Barovero",pos:"POR",valor:300,atk:10,def:85},
+  {nombre:"Cata Díaz",pos:"DEF",valor:250,atk:30,def:85},{nombre:"Manso",pos:"MED",valor:270,atk:77,def:40},
+  {nombre:"Bolatti",pos:"MED",valor:230,atk:68,def:70},{nombre:"J. Sand",pos:"DEL",valor:220,atk:76,def:20},
+  {nombre:"Gigliotti",pos:"DEL",valor:200,atk:70,def:20},{nombre:"Gino Peruzzi",pos:"DEF",valor:120,atk:45,def:50},
+  {nombre:"Pachi Carrizo",pos:"POR",valor:70,atk:5,def:38},
+  // ── WILDCARDS: ÍCONOS ARGENTOS NO-FUTBOLEROS ──
+  // (stats a conciencia: son memes, no cracks. Algún chiste de stat alta justificado.)
+  {nombre:"Ricardo Fort",pos:"DEL",valor:90,atk:55,def:8},       // el comandante, mete plata y carisma
+  {nombre:"Tinelli",pos:"MED",valor:60,atk:40,def:30},           // showman, maneja los tiempos
+  {nombre:"Diego Capusotto",pos:"MED",valor:50,atk:48,def:35},   // impredecible, talento de culto
+  {nombre:"Pol Pelle (Floricienta)",pos:"DEL",valor:35,atk:38,def:12},
+  {nombre:"Moria Casán",pos:"DEF",valor:45,atk:25,def:62},       // la One: nadie le pasa por arriba
+  {nombre:"El Dipy",pos:"DEL",valor:30,atk:42,def:10},
+  {nombre:"Pablo Lescano",pos:"MED",valor:55,atk:58,def:22},     // cumbia 420, gambeta de barrio
+  {nombre:"L-Gante",pos:"DEL",valor:40,atk:50,def:8},
+  {nombre:"Wos",pos:"MED",valor:48,atk:54,def:28},               // freestyle, rapidez mental
+  {nombre:"Mirtha Legrand",pos:"POR",valor:60,atk:5,def:70},     // 90+ años bajo los 3 palos, no se cae
+  {nombre:"Marcelo Gallardo (jug)",pos:"MED",valor:340,atk:84,def:45}, // como jugador era un 10
+  {nombre:"El Noba",pos:"DEL",valor:38,atk:46,def:14},
+  // ── MEMES CLÁSICOS DE TU JUEGO ──
+  {nombre:"Eti Ciclon",pos:"DEL",valor:15,atk:22,def:3},{nombre:"Tano Pasman",pos:"MED",valor:30,atk:10,def:10},
+  {nombre:"Chiqui Tapia",pos:"DEF",valor:30,atk:10,def:30},{nombre:"Pibe Janson",pos:"DEL",valor:25,atk:15,def:5},
+];
+const EQUIPOS_BOT = [
+  {nombre:"Real Madrid",fuerza:88,estilo:"ofensivo",estrellas:["Ronaldo","Raúl"],estadio:"el Santiago Bernabéu",aforo:"85.000",ambiente:1.0},
+  {nombre:"Man City",fuerza:90,estilo:"ofensivo",estrellas:["Haaland","De Bruyne"],estadio:"el Etihad",aforo:"53.000",ambiente:0.9},
+  {nombre:"Bayern Munich",fuerza:86,estilo:"ofensivo",estrellas:["Makaay","Pizarro"],estadio:"el Allianz Arena",aforo:"75.000",ambiente:1.0},
+  {nombre:"Liverpool",fuerza:85,estilo:"equilibrado",estrellas:["Salah","Van Dijk"],estadio:"Anfield",aforo:"54.000",ambiente:1.15},
+  {nombre:"Boca Juniors",fuerza:80,estilo:"equilibrado",estrellas:["Palermo","Tevez","Riquelme"],estadio:"La Bombonera",aforo:"54.000",ambiente:1.25},
+  {nombre:"River Plate",fuerza:80,estilo:"ofensivo",estrellas:["Cavenaghi","Saviola"],estadio:"el Monumental",aforo:"84.000",ambiente:1.2},
+  {nombre:"Inter",fuerza:82,estilo:"defensivo",estrellas:["Adriano","Zanetti"],estadio:"San Siro",aforo:"75.000",ambiente:1.1},
+  {nombre:"AC Milan",fuerza:83,estilo:"defensivo",estrellas:["Shevchenko","Maldini"],estadio:"San Siro",aforo:"75.000",ambiente:1.1},
+  {nombre:"Juventus",fuerza:84,estilo:"defensivo",estrellas:["Del Piero","Trezeguet"],estadio:"el Juventus Stadium",aforo:"41.000",ambiente:1.0},
+  {nombre:"Man United",fuerza:84,estilo:"ofensivo",estrellas:["Rooney","Van Nistelrooy"],estadio:"Old Trafford",aforo:"74.000",ambiente:1.1},
+  {nombre:"Arsenal",fuerza:81,estilo:"ofensivo",estrellas:["Henry","Bergkamp"],estadio:"el Emirates",aforo:"60.000",ambiente:0.95},
+  {nombre:"PSG",fuerza:83,estilo:"ofensivo",estrellas:["Ronaldinho","Pauleta"],estadio:"el Parque de los Príncipes",aforo:"48.000",ambiente:1.0},
+  {nombre:"Chelsea",fuerza:82,estilo:"defensivo",estrellas:["Drogba","Lampard"],estadio:"Stamford Bridge",aforo:"40.000",ambiente:1.05},
+  {nombre:"Ajax",fuerza:76,estilo:"ofensivo",estrellas:["Ibrahimovic","Van der Vaart"],estadio:"el Johan Cruyff Arena",aforo:"55.000",ambiente:1.0},
+  {nombre:"Porto",fuerza:74,estilo:"equilibrado",estrellas:["McCarthy","Derlei"],estadio:"el Do Dragão",aforo:"50.000",ambiente:1.05},
+  {nombre:"Chacarita",fuerza:58,estilo:"defensivo",estrellas:["Tanque Silva"],estadio:"el Chacarita (San Martín)",aforo:"24.000",ambiente:1.2},
+  {nombre:"Sacachispas",fuerza:52,estilo:"defensivo",estrellas:["Toranzo","Olave"],estadio:"el Materno Pereyra",aforo:"3.000",ambiente:1.25},
+  {nombre:"Dep Riestra",fuerza:55,estilo:"caótico",estrellas:["Iribarren"],estadio:"el Guillermo Laza",aforo:"3.500",ambiente:1.3},
+  {nombre:"Sarmiento",fuerza:50,estilo:"defensivo",estrellas:["El Chaqueño"],estadio:"el Eva Perón",aforo:"22.000",ambiente:1.15},
+];
+// estadios "falopa" para sortear al jugador
+const ESTADIOS_RANDOM=[
+  {nombre:"el Templo del Asado",aforo:"12.000"},
+  {nombre:"la Caldera del Conurbano",aforo:"28.000"},
+  {nombre:"el Gigante de Chapa y Pintura",aforo:"19.500"},
+  {nombre:"la Bombonerita de Barrio",aforo:"8.000"},
+  {nombre:"el Coloso del Potrero",aforo:"15.000"},
+  {nombre:"el Feudo del Fernet",aforo:"21.000"},
+  {nombre:"la Fortaleza del Choripán",aforo:"17.000"},
+  {nombre:"el Estadio Mama Lo Sabe",aforo:"6.500"},
+  {nombre:"la Catedral del Vino en Caja",aforo:"13.000"},
+  {nombre:"el Monumental de Garrafa",aforo:"24.000"},
+  {nombre:"el Templo de la Birra Tibia",aforo:"11.000"},
+  {nombre:"la Olla a Presión",aforo:"30.000"},
+  {nombre:"el Predio Doña Rosa",aforo:"4.000"},
+  {nombre:"el Cilindro de Aluminio",aforo:"26.000"},
+  {nombre:"la Bonbonera del Oeste",aforo:"18.000"},
+];
+// árbitros icónicos del fútbol argentino: cada estilo cambia probabilidades y comentarios
+const ARBITROS=[
+  {nombre:"Javier Castrilli",emoji:"⚖️",estilo:"tarjetero",tarjeta:1.7, penal:1.1, frase:"'El Sheriff'. Expulsa con cara de poker, no negocia nada."},
+  {nombre:"Horacio Elizondo",emoji:"🌍",estilo:"justo",   tarjeta:1.0, penal:1.0, frase:"El de la final del Mundial 2006. Autoridad y temple."},
+  {nombre:"Néstor Pitana",emoji:"🎬",estilo:"figura",     tarjeta:1.2, penal:1.1, frase:"Pitó la final de Rusia 2018. Pinta de protagonista."},
+  {nombre:"Patricio Loustau",emoji:"🧐",estilo:"tarjetero",tarjeta:1.6, penal:1.1, frase:"Tiene el bolsillo liviano para las amarillas."},
+  {nombre:"Fernando Rapallini",emoji:"📺",estilo:"VAR",   tarjeta:1.1, penal:1.4, frase:"Va al VAR hasta para cobrar el lateral."},
+  {nombre:"Darío Herrera",emoji:"📺",estilo:"VAR",        tarjeta:1.2, penal:1.3, frase:"Mira el monitor más que la cancha."},
+  {nombre:"Ángel Sánchez",emoji:"🔥",estilo:"tarjetero",  tarjeta:1.5, penal:1.2, frase:"Donde hay roce, hay tarjeta."},
+  {nombre:"Pablo Lunati",emoji:"😎",estilo:"figura",      tarjeta:1.3, penal:1.0, frase:"Le encanta charlar con los jugadores… y ser el centro."},
+  {nombre:"Gabriel Brazenas",emoji:"🤝",estilo:"casero",  tarjeta:0.9, penal:1.2, frase:"Dicen que se le nota la camiseta abajo del buzo."},
+  {nombre:"Andrés Merlos",emoji:"🤡",estilo:"caótico",    tarjeta:1.4, penal:1.3, frase:"Con él puede pasar cualquier cosa, agarrate."},
+  {nombre:"'Chiqui' Pezzota",emoji:"🧉",estilo:"permisivo",tarjeta:0.5, penal:0.8, frase:"Deja jugar, 'esto es fútbol, muchachos', dice."},
+  {nombre:"Sergio Pezzotta",emoji:"🎩",estilo:"justo",    tarjeta:1.0, penal:1.0, frase:"Tranquilo y prolijo, cobra lo justo."},
+  {nombre:"Mauro Vigliano",emoji:"🖥️",estilo:"VAR",       tarjeta:1.1, penal:1.4, frase:"El rey del VAR, revisa todo dos veces."},
+  {nombre:"Diego Abal",emoji:"😤",estilo:"casero",        tarjeta:1.1, penal:1.3, frase:"Siempre quedó la duda de para quién cobraba."},
+  {nombre:"Germán Delfino",emoji:"📣",estilo:"figura",    tarjeta:1.2, penal:1.0, frase:"Explica cada cobro como si diera clase."},
+];
+const ESTILO_MOD={ofensivo:{atk:10,def:-8},defensivo:{atk:-8,def:10},equilibrado:{atk:0,def:0},"caótico":{atk:6,def:6}};
+const PESO_ATK={POR:0,DEF:.15,MED:.55,DEL:1}, PESO_DEF={POR:1,DEF:.9,MED:.4,DEL:.1};
+const clamp=(x,lo,hi)=>Math.max(lo,Math.min(hi,x));
+const R=Math.random;
+const pick=a=>a[Math.floor(R()*a.length)];
+
+function rendimiento(j){ return (0.82+0.18*((j.moral??100)/100)); }
+function penalPos(j,slot){ if(j.pos===slot)return 1; const o={POR:0,DEF:1,MED:2,DEL:3}; return [1,.82,.62,.45][Math.abs(o[j.pos]-o[slot])]; }
+
+function calcularFuerza(alineacion, formKey, dtKey){
+  const form=FORMACIONES[formKey], dt=DTS[dtKey]||{atk:0,def:0};
+  let sA=0,sD=0,les=0;
+  for(const {jugador,slot} of alineacion){
+    if(!jugador)continue;
+    const f=rendimiento(jugador), fp=penalPos(jugador,slot);
+    if(jugador.lesionFechas>0)les++;
+    const mult=jugador.pos===slot?1:fp;
+    sA+=jugador.atk*PESO_ATK[slot]*f*mult;
+    sD+=jugador.def*PESO_DEF[slot]*f*mult;
+  }
+  const tA=form.slots.reduce((s,sl)=>s+PESO_ATK[sl],0), tD=form.slots.reduce((s,sl)=>s+PESO_DEF[sl],0);
+  let atk=(sA/tA)+form.atk+dt.atk, def=(sD/tD)+form.def+dt.def;
+  atk-=les*6; def-=les*6;
+  return {atk:clamp(atk,5,130),def:clamp(def,5,130),lesionados:les};
+}
+function fuerzaBot(bot){
+  const m=ESTILO_MOD[bot.estilo]||ESTILO_MOD.equilibrado;
+  const v=bot.estilo==="caótico"?(R()*30-15):(R()*12-6);
+  // -8 global: los bots eran demasiado duros para un plantel recién armado
+  return {atk:clamp(bot.fuerza-8+m.atk+v,20,120),def:clamp(bot.fuerza-8+m.def+v,20,120)};
+}
+function simularPartido(o){
+  const MIN=[4,11,18,26,33,40,47,55,63,71,79,86,90];
+  let gl=0,gv=0; const ev=[]; const lesiones=[];
+  const arb=o.arbitro||{tarjeta:1,penal:1};
+  const ambiente=o.ambienteLocal||1.0;   // factor cancha del local
+  let pL=clamp((o.fuerzaLocal.atk-o.fuerzaVisita.def)/120+0.20,0.05,0.66);
+  let pV=clamp((o.fuerzaVisita.atk-o.fuerzaLocal.def)/120+0.20,0.05,0.66);
+  // localía base + un plus chico por ambiente de cancha (entre 1.10 y ~1.16)
+  const plusLocal = 1.10 + (ambiente-1.0)*0.22;
+  pL*=plusLocal; pV*=0.92;
+  // umbrales de eventos modulados por el árbitro
+  const probRoja  = 0.005 * arb.tarjeta;
+  const probPenal = 0.005 + 0.045 * arb.penal;   // base ~0.05, escala con el árbitro
+  const probLesion= 0.06;
+  for(const min of MIN){
+    const d=R();
+    if(d<probRoja){ const loc=R()<.5; if(loc){pL*=.7;pV*=1.15}else{pV*=.7;pL*=1.15}
+      ev.push({minuto:min,tipo:"roja",equipo:loc?o.nombreLocal:o.nombreVisita,jugador:pick(loc?o.jugLocal:o.jugVisita),marcador:[gl,gv]}); continue; }
+    if(d<probRoja+probPenal){ const paraL=R()<pL/(pL+pV); const conv=R()<.74; const jug=pick(paraL?o.jugLocal:o.jugVisita);
+      if(conv){paraL?gl++:gv++;} ev.push({minuto:min,tipo:"penal",equipo:paraL?o.nombreLocal:o.nombreVisita,jugador:jug,convierte:conv,marcador:[gl,gv]}); continue; }
+    if(d<probRoja+probPenal+probLesion){ const loc=R()<.5; const jug=pick(loc?o.jugLocal:o.jugVisita); if(loc)pL*=.92;else pV*=.92;
+      lesiones.push({local:loc,jugador:jug}); ev.push({minuto:min,tipo:"lesion",equipo:loc?o.nombreLocal:o.nombreVisita,jugador:jug,marcador:[gl,gv]}); continue; }
+    const t=R();
+    if(t<pL*.5){ gl++; ev.push({minuto:min,tipo:"gol",equipo:o.nombreLocal,jugador:pick(o.jugLocal),marcador:[gl,gv]}); }
+    else if(t<pL*.5+pV*.5){ gv++; ev.push({minuto:min,tipo:"gol",equipo:o.nombreVisita,jugador:pick(o.jugVisita),marcador:[gl,gv]}); }
+    else if(t<.72){ const loc=R()<.5; ev.push({minuto:min,tipo:"chance",equipo:loc?o.nombreLocal:o.nombreVisita,jugador:pick(loc?o.jugLocal:o.jugVisita),marcador:[gl,gv]}); }
+    else if(t<.84){ const loc=R()<.5; const tipoInc = (R()<arb.tarjeta*0.4) ? "incidencia" : "incidencia";
+      ev.push({minuto:min,tipo:tipoInc,equipo:loc?o.nombreLocal:o.nombreVisita,jugador:pick(loc?o.jugLocal:o.jugVisita),marcador:[gl,gv]}); }
+    else ev.push({minuto:min,tipo:"medio",marcador:[gl,gv]});
+  }
+  return {golesLocal:gl,golesVisita:gv,eventos:ev,lesiones};
+}
+
+/* ============================================================================
+   FRASES (relato y prensa)
+   ========================================================================== */
+const F={
+  gol:["¡GOLAZO de {j}! ¡El estadio explota!","¡{j} la mete y enloquece la cancha!","¡Qué joya de {j}!","¡{j} no perdona! ¡Gooool!","Definición de lujo de {j}."],
+  golEsp:{Maradona:["¡GOOOL DE MARADONA! La mano de Dios y el gol del siglo juntos.","¡Maradona gambetea a TODOS y la clava!"],
+          "Eti Ciclon":["¡GOOOL DEL ETI CICLON! No sabemos cómo, pero entró.","¡Eti Ciclon! ¡El meme hecho gol!"],
+          Messi:["¡MESSI! ¡La pausa, el enganche y al ángulo! De otro planeta.","¡Otra vez Messi! ¿Hasta cuándo, genio?"],
+          Batistuta:["¡BATIGOL! ¡Le pegó como solo él sabe! ¡Tremendo!"],
+          "Ricardo Fort":["¡GOL DEL COMANDANTE FORT! ¡Lo pagó, lo metió, todo con onda!"],
+          "Pablo Lescano":["¡GOOOL DE LESCANO! ¡Sonó la cumbia en el estadio entero!"],
+          "L-Gante":["¡GOL DE L-GANTE! ¡BZRP la rompe y la clava, eh eh eh!"],
+          "Mirtha Legrand":["¡INCREÍBLE! ¡MIRTHA SALIÓ DEL ARCO Y METIÓ GOL! ¡Como te ven, te tratan!"],
+          "Diego Capusotto":["¡GOOOL DE CAPUSOTTO! Violencia rivas no, esto fue puro arte."],
+          Wos:["¡GOL DE WOS! Tiró un freestyle y la metió en el mismo movimiento."]},
+  golRival:["¡Gol de {j} para {eq}! Silencio en tu tribuna.","{j} la empuja y {eq} festeja."],
+  penalOk:["{j} la manda al ángulo. Adentro.","{j} pica el penal y la clava."],
+  penalFalla:["El arquero le adivina a {j}.","{j} la mandó a la tribuna. Insólito."],
+  chance:["¡La tuvo {eq}! La manda apenas afuera.","Disparo de {eq}... el palo lo salva.","Mano a mano y se va por arriba.","¡Atajadón! El arquero le tapó el grito de gol a {eq}.","Tiro libre peligroso de {eq}, pasa rozando el ángulo.","¡Casi! La pelota lamió el travesaño tras el remate de {eq}.","Centro envenenado de {eq} que nadie llega a empujar."],
+  inci:["Amarilla para {j} por cortar la contra.","{j} llega tarde y ve la amonestación.","Offside finito de {j}.","VAR revisa una de {j}... siga, siga.","{j} protesta y el árbitro le hace 'shhh'.","Falta táctica de {j}, libre peligroso.","{j} se queja de un agarrón en el área. No le dan nada.","Pierde tiempo {j} y el banco rival explota."],
+  roja:["Roja directa para {j}. Partido roto.","El árbitro no duda: expulsado {j}.","¡Doble amarilla! {j} se va a las duchas.","Plancha tremenda de {j}. Roja sin discusión."],
+  lesion:["{j} queda sentido y pierde ritmo.","Problema muscular para {j}. Se agarra la pierna.","{j} no está cómodo tras el golpe.","Se resiente {j}, pide el cambio con la mano."],
+  medio:["La pelota circula en la mitad de la cancha...","Pausa en el juego, reordenan líneas.","Cambio de ritmo, la maneja el mediocampo.","Tiki-taki en el círculo central, no pasa nada.","Saque largo del arquero, se va a disputa.","Los dos equipos se estudian, partido trabado."],
+  // ── NUEVO: color de transmisión ──
+  hinchada:["🎺 La hinchada de {eq} no para de cantar, esto es una fiesta.","La popular de {eq} salta y la cancha tiembla.","Bombo y trompeta sin parar en la tribuna de {eq}.","Una bandera gigante cubre toda la popular de {eq}.","Silbidos de la tribuna, está caliente esto.","Cantan los hinchas: '¡dale {eq}, dale {eq}!'.","Papelitos y humo de bengala en el recibimiento."],
+  clima:["🌧️ Empieza a caer una llovizna que complica el control.","El campo está pesado, la pelota no corre.","Sol pleno y 30 grados, se juega al trote.","Viento cruzado que vuelve loco a los arqueros.","La cancha es un billar, la pelota vuela.","Niebla bajando sobre el estadio, se ve poco."],
+  banco:["El DT de {eq} grita instrucciones desde la línea.","Calientan los suplentes de {eq}, se viene un cambio.","El banco de {eq} protesta de pie.","El ayudante de campo anota algo en la pizarra.","El DT se agarra la cabeza tras la jugada errada."],
+  relator:["¡Qué partidazo, señoras y señores!","Esto se pudre, va y viene de arco a arco.","No se lo pueden perder, está buenísimo.","Tensión en las tribunas, se define cualquier cosa.","Minutos de máxima emoción en el estadio."],
+  // ── árbitro ──
+  arbInicio:["Dirige {arb}. {fraseArb}","En el silbato, {arb}. {fraseArb}","{arb} será el juez del partido. {fraseArb}"],
+  arbTarjeta:["{arb} ya saca la amarilla, fiel a su estilo.","Otra tarjeta de {arb}, no perdona una.","{arb} amonesta y muestra el cartón."],
+  arbVAR:["{arb} se va al monitor del VAR... la duda mata.","Largos segundos de {arb} revisando la jugada.","El VAR llama a {arb}, todos contienen la respiración."],
+  victoria:["Triunfazo. La tabla se mueve.","Victoria que compra tranquilidad.","Ganaste y el vestuario respira.","Tres puntos de oro, la gente se va contenta."],
+  empate:["Empate áspero. Suma pero sabe a poco.","Punto rescatado en un partido bravo.","Tablas. Se suma, aunque duela."],
+  derrota:["Derrota dura. Hay que levantar al grupo.","Se escapó el partido. Caras largas.","Caída dolorosa, el mercado mira refuerzos."],
+};
+const REPORTEROS=["🎙️ Gastón Edul","🗣️ Tití Fernández","🎙️ Christian Martin","📺 Flavio Azzaro","📰 Diario Olé","🕵️ TyC Sports","📻 Radio La Red","🤌 Bolavip"];
+const NOTICIAS=[
+  "🍺 INSÓLITO: {j} fue encontrado en la popular comiendo un chori a dos horas del partido. El DT de {eq} dice que 'está en condiciones'.",
+  "🚔 ESCÁNDALO: {j} fue demorado por intentar pagar la nafta con pases de vestuario firmados.",
+  "🎰 BOMBA: {j} habría perdido el bono del mes en el bingo de Quilmes. En {eq} no hay declaraciones.",
+  "💊 ALERTA: {j} llegó a la práctica con los ojos más rojos que la camiseta de {eq}. 'Es conjuntivitis', dicen.",
+  "🦆 CRISIS TÁCTICA: El DT de {eq} dibujó la formación en una servilleta. {j} la usó para limpiarse la boca.",
+  "📱 POLÉMICA: {j} le dio 'me gusta' a una foto comprometedora. Reunión de urgencia en {eq}.",
+  "🍔 FILTRACIÓN: Se viralizó un video de {j} pidiéndole perdón a un Big Mac. En {eq} lo llaman 'preparación mental'.",
+  "🐔 ESCÁNDALO RURAL: {j} fue visto discutiendo a los gritos con un pato en el predio de {eq}. Nadie preguntó.",
+  "🚁 RUMOR: Un jeque ofreció comprar {eq} a cambio de {j} y tres caballos. Rechazaron la oferta. Los caballos no.",
+  "🧉 CRISIS NUTRICIONAL: El médico de {eq} le pidió a {j} que tome menos mate. Renunció al día siguiente.",
+  "🍷 EXCLUSIVO: {j} llegó a la concentración con fernet 'para los nervios'. Terminaron tomando todos.",
+  "🎲 RUMOR: {j} apostó su camiseta titular en un truco y perdió. En {eq} revisan el reglamento.",
+  "🤡 TÁCTICA CUESTIONADA: El DT de {eq} usó a {j} de líbero en un 1-1-3. Ganaron 4-0. Nadie entiende.",
+  "🍕 EXCLUSIVO: {j} pidió pizza en el entretiempo. Con extra muzza. El nutricionista de {eq} no responde mensajes.",
+  "💸 MERCADO: Un club de Chipre ofreció 3 bidones de aceite y un Corolla 2009 por {j}. {eq} lo evalúa.",
+  "🎻 CULTURAL: {j} faltó al entrenamiento de {eq} porque tenía 'función de teatro'. Nadie sabía que actuaba.",
+  "🛹 INSÓLITO: {j} llegó al predio de {eq} en monopatín eléctrico y se lo afanaron en la puerta. Caminó 8 cuadras.",
+  "🦜 INESPERADO: El loro de la abuela de {j} aprendió a putear al árbitro. En {eq} lo quieren de utilero.",
+  "📉 BAJÓN: {j} se peleó con el wifi del vestuario de {eq} y perdió tres horas reseteando el router.",
+  "🥩 ASADO POLÉMICO: {j} hizo un asado para el plantel de {eq} y se olvidó el chimichurri. Casi hay motín.",
+  "🎤 PICANTE: '{j} corre menos que mi abuela', tiró un hincha de {eq} en la radio. {j} respondió con un emoji de payaso.",
+  "🧥 MODA: {j} apareció con una campera de $400.000 y el utilero de {eq} todavía espera que le paguen los botines.",
+  "🐍 SUPERSTICIÓN: {j} entra a la cancha siempre con el pie izquierdo. En {eq} ganaron 1 de los últimos 6. Revisan la cábala.",
+  "📺 RATING: La entrevista de {j} en la tele midió más que la novela. En {eq} ya lo quieren de conductor.",
+];
+
+window.J = (function(){
+  const SAVE="ligamaster_v2";
+  const MAX=19, LIMITE=7;
+  let S=null;        // estado
+  let tabActual="club";
+  let relato={timer:null,saltar:false};
+
+  /* ── ESTADO INICIAL / PERSISTENCIA ── */
+  function nuevoEstado(nombre){
+    const tabla={}; tabla[nombre]={pts:0,pj:0,gf:0,gc:0};
+    EQUIPOS_BOT.forEach(b=>tabla[b.nombre]={pts:0,pj:0,gf:0,gc:0});
+    const dt=pick(Object.keys(DTS));
+    const fixture=EQUIPOS_BOT.map(b=>b.nombre); shuffle(fixture);
+    // sortear 2 clásicos al azar entre los rivales
+    const rivales=EQUIPOS_BOT.map(b=>b.nombre); shuffle(rivales);
+    const clasicos=[rivales[0],rivales[1]];
+    return {
+      nombre, plata:3100, plantel:[], fecha:1, tabla, fixture,
+      estadio:"el Coloso del Barrio", aforo:"18.000",
+      dt, formacion:"2-1-2", alineacion:{}, goleadores:{}, noticias:[],
+      copa:null, llaves:{cuartos:[],semis:[],final:[],campeon:null},
+      clasicos, despedido:false, gameover:false,
+      objetivos:generarObjetivos(clasicos),
+      // contadores que usan los objetivos
+      _ganados:0,_empatados:0,_derrotas:0,_golesAfavor:0,
+      _clasicosGanados:0,_clasicosPerdidos:0,_localPerdidos:0,_vallaInvicta:0,
+    };
+  }
+
+  /* ── POZO DE OBJETIVOS: se sortean 2-3 por liga ── */
+  // cada objetivo: id, txt(clasicos), tipo, meta, modo ('min'|'max'), deadline(fecha límite para no fallar)
+  function poolObjetivos(clasicos){
+    const c0=clasicos[0], c1=clasicos[1];
+    // dif: 1=fácil, 2=medio, 3=difícil
+    return [
+      {tipo:"posicion", modo:"min", meta:10, dif:1, txt:()=>"Terminar en la mitad de arriba (top 10)", deadline:MAX},
+      {tipo:"posicion", modo:"min", meta:8,  dif:2, txt:()=>"Clasificar a la Copa (top 8)", deadline:MAX},
+      {tipo:"posicion", modo:"min", meta:5,  dif:2, txt:()=>"Terminar entre los primeros 5", deadline:MAX},
+      {tipo:"posicion", modo:"min", meta:3,  dif:3, txt:()=>"Subir al podio (top 3)", deadline:MAX},
+      {tipo:"derrotas", modo:"max", meta:10, dif:1, txt:()=>"No perder más de 10 partidos", deadline:MAX},
+      {tipo:"derrotas", modo:"max", meta:7,  dif:2, txt:()=>"No perder más de 7 partidos", deadline:MAX},
+      {tipo:"golesAfavor", modo:"min", meta:20, dif:1, txt:()=>"Convertir 20 goles en la liga", deadline:MAX},
+      {tipo:"golesAfavor", modo:"min", meta:35, dif:3, txt:()=>"Convertir 35 goles en la liga", deadline:MAX},
+      {tipo:"ganados", modo:"min", meta:6,  dif:1, txt:()=>"Ganar al menos 6 partidos", deadline:MAX},
+      {tipo:"ganados", modo:"min", meta:8,  dif:3, txt:()=>"Ganar al menos 8 partidos", deadline:MAX},
+      {tipo:"clasicosGanados", modo:"min", meta:1, dif:2, txt:()=>`Ganar un clásico (${c0} o ${c1})`, deadline:MAX},
+      {tipo:"clasicosGanados", modo:"min", meta:2, dif:3, txt:()=>`Ganar los dos clásicos (${c0} y ${c1})`, deadline:MAX},
+      {tipo:"clasicosPerdidos", modo:"max", meta:0, dif:2, txt:()=>`No perder ningún clásico`, deadline:MAX},
+      {tipo:"localPerdidos", modo:"max", meta:2, dif:2, txt:()=>"Perder como mucho 2 de local", deadline:MAX},
+      {tipo:"vallaInvicta", modo:"min", meta:4, dif:2, txt:()=>"Dejar tu valla invicta 4 veces", deadline:MAX},
+    ];
+  }
+  function generarObjetivos(clasicos){
+    const pool=poolObjetivos(clasicos);
+    const faciles=pool.filter(o=>o.dif===1);
+    const medios =pool.filter(o=>o.dif===2);
+    const dificiles=pool.filter(o=>o.dif===3);
+    shuffle(faciles); shuffle(medios); shuffle(dificiles);
+    const cantidad = 2 + (R()<.5?1:0); // 2 o 3
+    const elegidos=[]; const tiposUsados=new Set();
+    const push=(o)=>{ if(!o||tiposUsados.has(o.tipo))return false; tiposUsados.add(o.tipo);
+      elegidos.push({tipo:o.tipo,modo:o.modo,meta:o.meta,dif:o.dif,txt:o.txt(),deadline:o.deadline}); return true; };
+    // 1 fácil garantizado
+    for(const o of faciles){ if(push(o))break; }
+    // como mucho 1 difícil
+    for(const o of dificiles){ if(push(o))break; }
+    // completar con medios (y fáciles extra si hace falta) hasta la cantidad
+    const resto=[...medios, ...faciles];
+    for(const o of resto){ if(elegidos.length>=cantidad)break; push(o); }
+    return elegidos.slice(0,cantidad);
+  }
+  function cargar(){
+    try{ const raw=localStorage.getItem(SAVE); if(raw){
+      S=JSON.parse(raw);
+      // migración de partidas viejas: si faltan clásicos u objetivos nuevos, regenerar
+      if(!S.clasicos || !S.clasicos.length){
+        const rivales=EQUIPOS_BOT.map(b=>b.nombre); shuffle(rivales);
+        S.clasicos=[rivales[0],rivales[1]];
+      }
+      if(!S.objetivos || !S.objetivos.length || !S.objetivos[0].modo){
+        S.objetivos=generarObjetivos(S.clasicos);
+      }
+      // contadores que pueden no existir
+      ["_ganados","_empatados","_derrotas","_clasicosGanados","_clasicosPerdidos","_localPerdidos","_vallaInvicta"].forEach(k=>{ if(S[k]==null)S[k]=0; });
+      if(S.gameover==null)S.gameover=false;
+      if(S._ultimatum==null)S._ultimatum=false;
+      if(S._prensaNoLeidas==null)S._prensaNoLeidas=0;
+      if(!S.estadio){ S.estadio="el Coloso del Barrio"; S.aforo="18.000"; }
+      return true;
+    } }catch(e){}
+    return false;
+  }
+  function guardar(){ try{ localStorage.setItem(SAVE,JSON.stringify(S)); }catch(e){} }
+
+  function shuffle(a){ for(let i=a.length-1;i>0;i--){const j=Math.floor(R()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; }
+  function botData(n){
+    const b=EQUIPOS_BOT.find(b=>b.nombre===n);
+    if(b)return b;
+    // mi equipo (o cualquiera sin datos): estadio propio guardado en el estado
+    return {nombre:n,fuerza:65,estilo:"equilibrado",estrellas:[n],
+            estadio:(S&&S.estadio)||"tu estadio",aforo:(S&&S.aforo)||"15.000",ambiente:1.1};
+  }
+
+  /* ── ALINEACIÓN: arma la lista {jugador,slot} respetando la asignación del usuario ── */
+  function alineacionActual(){
+    const form=FORMACIONES[S.formacion];
+    const asign=S.alineacion[S.formacion]||{}; // slotIndex -> nombre
+    const usados=new Set();
+    const result=[];
+    // primero respetar lo asignado por el usuario
+    form.slots.forEach((slot,i)=>{
+      const nom=asign[i];
+      let jug=nom?S.plantel.find(j=>j.nombre===nom):null;
+      if(jug && !usados.has(jug.nombre) && jug.lesionFechas<=0){ usados.add(jug.nombre); result.push({jugador:jug,slot,idx:i}); }
+      else result.push({jugador:null,slot,idx:i});
+    });
+    // autocompletar slots vacíos con mejores disponibles para ese rol
+    result.forEach(r=>{
+      if(r.jugador)return;
+      const disp=S.plantel.filter(j=>!usados.has(j.nombre)&&j.lesionFechas<=0);
+      if(!disp.length)return;
+      disp.sort((a,b)=> (r.slot==="POR"||r.slot==="DEF") ? (b.def-a.def):(b.atk-a.atk));
+      const elegido=disp.find(j=>j.pos===r.slot)||disp[0];
+      usados.add(elegido.nombre); r.jugador=elegido;
+    });
+    return result;
+  }
+
+  function nombresEnCancha(){ return alineacionActual().filter(r=>r.jugador).map(r=>r.jugador.nombre); }
+
+  /* ── JUGAR UNA FECHA ── */
+  function jugarFecha(){
+    if(S.gameover){ return; }
+    if(S.fecha>MAX){ toast("La liga ya terminó. Andá a la Copa."); return; }
+    if(S.plantel.filter(j=>j.lesionFechas<=0).length<1){ toast("Primero armá tu equipo en el Mercado."); irATab("mercado"); return; }
+
+    const rival = S.fixture.length? S.fixture.shift() : pick(EQUIPOS_BOT.map(b=>b.nombre));
+    const bot=botData(rival);
+    const ali=alineacionActual();
+    const miF=calcularFuerza(ali,S.formacion,S.dt);
+    const rivF=fuerzaBot(bot);
+    const esLocal=R()<.5;
+
+    const jugMios = nombresEnCancha().length? nombresEnCancha() : [S.nombre];
+    const jugRival = bot.estrellas.length? bot.estrellas : [rival];
+    const esClasico = S.clasicos.includes(rival);
+
+    // árbitro del partido y datos de estadio
+    const arb = pick(ARBITROS);
+    const localData = esLocal ? botData(S.nombre) : bot;
+    const estadio = localData.estadio || "el estadio";
+    const aforo = localData.aforo || "—";
+    const ambienteLocal = (localData.ambiente||1.0) * (esClasico?1.08:1.0); // el clásico calienta la cancha
+
+    const sim = simularPartido({
+      nombreLocal: esLocal?S.nombre:rival,
+      nombreVisita: esLocal?rival:S.nombre,
+      fuerzaLocal: esLocal?miF:rivF,
+      fuerzaVisita: esLocal?rivF:miF,
+      jugLocal: esLocal?jugMios:jugRival,
+      jugVisita: esLocal?jugRival:jugMios,
+      arbitro: arb,
+      ambienteLocal,
+    });
+
+    const ctxRelato = { estadio, aforo, arbitro:arb, nomLocalReal:(esLocal?S.nombre:rival) };
+    reproducirRelato(sim, esLocal?S.nombre:rival, esLocal?rival:S.nombre, S.nombre, ()=>{
+      finalizarFecha(sim, rival, esLocal);
+    }, esClasico, ctxRelato);
+  }
+
+  function finalizarFecha(sim, rival, esLocal){
+    const gMio = esLocal?sim.golesLocal:sim.golesVisita;
+    const gRiv = esLocal?sim.golesVisita:sim.golesLocal;
+    const esClasico = S.clasicos.includes(rival);
+
+    // goleadores
+    sim.eventos.forEach(e=>{
+      if(e.tipo==="gol") S.goleadores[e.jugador]=(S.goleadores[e.jugador]||0)+1;
+      if(e.tipo==="penal"&&e.convierte) S.goleadores[e.jugador]=(S.goleadores[e.jugador]||0)+1;
+    });
+
+    // tabla
+    asegTabla(S.nombre); asegTabla(rival);
+    S.tabla[S.nombre].pj++; S.tabla[rival].pj++;
+    S.tabla[S.nombre].gf+=gMio; S.tabla[S.nombre].gc+=gRiv;
+    S.tabla[rival].gf+=gRiv; S.tabla[rival].gc+=gMio;
+    let resultadoTxt, resultadoTipo;
+    if(gMio>gRiv){ S.tabla[S.nombre].pts+=3; S.plata+=300; resultadoTxt=pick(F.victoria)+" (+$300)"; subirMoral(8); resultadoTipo="victoria"; }
+    else if(gMio===gRiv){ S.tabla[S.nombre].pts++; S.tabla[rival].pts++; S.plata+=150; resultadoTxt=pick(F.empate)+" (+$150)"; resultadoTipo="empate"; }
+    else { S.tabla[rival].pts+=3; S.plata+=50; resultadoTxt=pick(F.derrota)+" (+$50)"; subirMoral(-12); S._derrotas=(S._derrotas||0)+1; resultadoTipo="derrota"; }
+    // racha de resultados (G/E/P) — guardo los últimos 6
+    if(!S.racha)S.racha=[];
+    S.racha.push(resultadoTipo==="victoria"?"G":resultadoTipo==="empate"?"E":"P");
+    if(S.racha.length>6)S.racha.shift();
+    // contadores de campaña / objetivos
+    if(resultadoTipo==="victoria")S._ganados=(S._ganados||0)+1;
+    else if(resultadoTipo==="empate")S._empatados=(S._empatados||0)+1;
+    if(gRiv===0)S._vallaInvicta=(S._vallaInvicta||0)+1;          // valla invicta
+    if(esLocal && resultadoTipo==="derrota")S._localPerdidos=(S._localPerdidos||0)+1; // derrota de local
+    if(esClasico){                                               // clásicos
+      if(resultadoTipo==="victoria")S._clasicosGanados=(S._clasicosGanados||0)+1;
+      else if(resultadoTipo==="derrota")S._clasicosPerdidos=(S._clasicosPerdidos||0)+1;
+      // un clásico mueve más la moral
+      subirMoral(resultadoTipo==="victoria"?6:resultadoTipo==="derrota"?-8:0);
+    }
+
+    // lesiones que duran fechas (solo a los míos en cancha)
+    sim.lesiones.forEach(l=>{
+      const esMio = (esLocal&&l.local)||(!esLocal&&!l.local);
+      if(esMio){ const j=S.plantel.find(p=>p.nombre===l.jugador); if(j){ j.lesionFechas=1+Math.floor(R()*3); } }
+    });
+    // lesiones bajan su contador (el plantel no se cansa: siempre llega al 100)
+    S.plantel.forEach(j=>{ if(j.lesionFechas>0) j.lesionFechas--; });
+
+    // partidos de los bots entre sí
+    simularBots(rival);
+
+    // noticia
+    generarNoticia({gMio,gRiv,rival,resultado:resultadoTipo});
+
+    S.fecha++;
+    // chequear despido (puede setear S.gameover y abrir overlay)
+    chequearObjetivos();
+    if(!S.gameover && S.fecha>MAX && !S.copa) iniciarCopa();
+
+    guardar(); render();
+    if(!S.gameover) toast(resultadoTxt);
+  }
+
+  function subirMoral(d){ S.plantel.forEach(j=>{ j.moral=clamp((j.moral??100)+d,30,100); }); }
+  function asegTabla(eq){ if(!S.tabla[eq])S.tabla[eq]={pts:0,pj:0,gf:0,gc:0}; }
+
+  function simularBots(rivalJugado){
+    const bots=Object.keys(S.tabla).filter(e=>e!==S.nombre&&e!==rivalJugado);
+    shuffle(bots);
+    for(let i=0;i+1<bots.length;i+=2){
+      const b1=botData(bots[i]), b2=botData(bots[i+1]);
+      const f1=fuerzaBot(b1), f2=fuerzaBot(b2);
+      const sim=simularPartido({nombreLocal:b1.nombre,nombreVisita:b2.nombre,fuerzaLocal:f1,fuerzaVisita:f2,
+        jugLocal:b1.estrellas,jugVisita:b2.estrellas});
+      asegTabla(b1.nombre);asegTabla(b2.nombre);
+      const g1=sim.golesLocal,g2=sim.golesVisita;
+      S.tabla[b1.nombre].pj++;S.tabla[b2.nombre].pj++;
+      S.tabla[b1.nombre].gf+=g1;S.tabla[b1.nombre].gc+=g2;
+      S.tabla[b2.nombre].gf+=g2;S.tabla[b2.nombre].gc+=g1;
+      if(g1>g2)S.tabla[b1.nombre].pts+=3; else if(g1===g2){S.tabla[b1.nombre].pts++;S.tabla[b2.nombre].pts++;} else S.tabla[b2.nombre].pts+=3;
+      sim.eventos.forEach(e=>{ if(e.tipo==="gol")S.goleadores[e.jugador]=(S.goleadores[e.jugador]||0)+1; });
+    }
+  }
+
+  function generarNoticia(ctx){
+    const nuevas=[];
+    // 1) Noticia deportiva basada en TU partido (si hubo)
+    if(ctx){
+      const {gMio,gRiv,rival,resultado}=ctx;
+      let dep;
+      if(resultado==="victoria"){
+        if(gMio>=3) dep=`⚽ GOLEADA: ${S.nombre} pasó por arriba a ${rival} ${gMio}-${gRiv}. La tribuna pide DT campeón.`;
+        else dep=`⚽ TRIUNFO: ${S.nombre} le ganó ${gMio}-${gRiv} a ${rival} y se prende en la tabla.`;
+      } else if(resultado==="empate"){
+        dep=`⚖️ REPARTO: ${S.nombre} y ${rival} igualaron ${gMio}-${gRiv}. Sabor a poco para los dos.`;
+      } else {
+        if(gRiv>=3) dep=`💀 PAPELÓN: ${rival} humilló a ${S.nombre} ${gRiv}-${gMio}. El micrófono del vestuario quedó apagado.`;
+        else dep=`😖 CAÍDA: ${S.nombre} perdió ${gRiv}-${gMio} con ${rival}. La dirigencia ya mira el teléfono.`;
+      }
+      nuevas.push({rep:pick(REPORTEROS),fecha:S.fecha,texto:dep});
+    }
+    // 2) Entre 1 y 2 noticias de color (memes)
+    const cuantas = 1 + (R()<.6?1:0);
+    const usadas=new Set();
+    for(let k=0;k<cuantas;k++){
+      const todos=[S.nombre,...EQUIPOS_BOT.map(b=>b.nombre)];
+      let eq=pick(todos);
+      let jug;
+      if(eq===S.nombre){
+        // noticia sobre mi equipo: necesito un jugador real de MI plantel
+        if(S.plantel.length){ jug=pick(S.plantel).nombre; }
+        else { eq=pick(EQUIPOS_BOT.map(b=>b.nombre)); jug=pick(botData(eq).estrellas); } // sin plantel, hablo de un bot
+      } else {
+        jug=pick(botData(eq).estrellas);
+      }
+      let plantilla, intentos=0;
+      do{ plantilla=pick(NOTICIAS); intentos++; }while(usadas.has(plantilla)&&intentos<6);
+      usadas.add(plantilla);
+      const texto=plantilla.replace(/{j}/g,jug).replace(/{eq}/g,eq);
+      nuevas.push({rep:pick(REPORTEROS),fecha:S.fecha,texto});
+    }
+    // insertar todas (la deportiva primero)
+    nuevas.forEach(n=>S.noticias.unshift(n));
+    S._prensaNoLeidas=(S._prensaNoLeidas||0)+nuevas.length;
+    while(S.noticias.length>40)S.noticias.pop();
+  }
+
+  /* ── EVALUACIÓN DE OBJETIVOS ── */
+  // devuelve {valor, ok, fallado} para un objetivo dado
+  function evalObjetivo(o){
+    const mi=S.tabla[S.nombre]||{gf:0};
+    let valor;
+    switch(o.tipo){
+      case "posicion":        valor=posicionMia(); break;
+      case "derrotas":        valor=S._derrotas||0; break;
+      case "golesAfavor":     valor=mi.gf||0; break;
+      case "ganados":         valor=S._ganados||0; break;
+      case "clasicosGanados": valor=S._clasicosGanados||0; break;
+      case "clasicosPerdidos":valor=S._clasicosPerdidos||0; break;
+      case "localPerdidos":   valor=S._localPerdidos||0; break;
+      case "vallaInvicta":    valor=S._vallaInvicta||0; break;
+      default: valor=0;
+    }
+    const ligaTermino = S.fecha>MAX;
+    const faltan=MAX-(S.fecha-1); // partidos que te quedan por jugar
+    let ok, fallado=false;
+    if(o.modo==="min"){
+      ok = valor>=o.meta;
+      if(o.tipo==="posicion"){
+        // imposible si, ganando todo lo que te queda, no alcanzás los puntos del que está en el puesto meta
+        if(ligaTermino && valor>o.meta) fallado=true;
+        else if(!ligaTermino && faltan<=MAX){
+          const ord=tablaOrdenada();
+          const miPts=(S.tabla[S.nombre]||{pts:0}).pts;
+          const objetivoEquipo=ord[o.meta-1]; // equipo actualmente en el puesto meta
+          if(objetivoEquipo){
+            const ptsObjetivo=objetivoEquipo[1].pts;
+            // techo si gano todo lo que me queda
+            const miTecho=miPts+faltan*3;
+            // sólo declaro imposible cuando ni con todo ganado los alcanzo (margen)
+            if(valor>o.meta && miTecho < ptsObjetivo) fallado=true;
+          }
+        }
+      } else {
+        if(o.tipo==="ganados" && valor+faltan<o.meta) fallado=true;
+        if(o.tipo==="golesAfavor"){ const techoGoles=valor+faltan*5; if(techoGoles<o.meta) fallado=true; }
+        if(o.tipo==="vallaInvicta"){ if(valor+faltan<o.meta) fallado=true; }
+        // clasicosGanados NO dispara despido irreversible: depende demasiado del sorteo
+        // del fixture. Sólo se evalúa como cumplido/incumplido al final de la liga.
+        if(ligaTermino && valor<o.meta) fallado=true;
+      }
+    } else {
+      ok = valor<=o.meta;
+      if(valor>o.meta) fallado=true;
+    }
+    return {valor, ok, fallado};
+  }
+  function clasicosRestantes(){
+    return (S.fixture||[]).filter(r=>S.clasicos.includes(r)).length;
+  }
+
+  /* ── OBJETIVOS / DESPIDO ── */
+  function posicionMia(){
+    const ord=tablaOrdenada();
+    return ord.findIndex(([e])=>e===S.nombre)+1;
+  }
+  function chequearObjetivos(){
+    if(S.gameover)return;
+    const fechaJugada = S.fecha-1;
+    const GRACIA = 6;
+
+    // ── FIN DE TEMPORADA: el veredicto de la dirigencia (único punto donde te echan) ──
+    if(fechaJugada>=MAX){
+      const pos=posicionMia();
+      const fallados=S.objetivos.filter(o=>!evalObjetivo(o).ok);
+      const cumplidos=S.objetivos.length-fallados.length;
+      // Top 6: gran campaña, te quedás pase lo que pase.
+      if(pos<=6){ return; }
+      // Fondo (últimos 3): papelón, te van sí o sí.
+      if(pos>=18){ ejecutarDespidoDirecto({txt:"evitar el papelón de terminar en el fondo de la tabla"}); return; }
+      // Mitad de tabla baja (14º-17º) sin cumplir NINGÚN objetivo: campaña pobre, te van.
+      if(pos>=14 && S.objetivos.length>0 && cumplidos===0){ ejecutarDespidoDirecto(fallados[0]); return; }
+      // 7º-13º, o con al menos un objetivo cumplido: campaña digna, seguís.
+      return;
+    }
+
+    // ── DURANTE LA LIGA: sólo AVISO (ultimátum), nunca despido directo ──
+    // Si a mitad de temporada vas camino al desastre (último puesto + objetivos rotos),
+    // la dirigencia te da el ultimátum una vez. No te echa todavía: hay tiempo de remontar.
+    if(fechaJugada===13 && !S._ultimatum){
+      const pos=posicionMia();
+      const fallados=S.objetivos.filter(o=>evalObjetivo(o).fallado);
+      if(pos>=16 || fallados.length>0){
+        const motivo = fallados[0] || {txt:"sacar al equipo del fondo de la tabla"};
+        dispararUltimatum(motivo);
+        return;
+      }
+    }
+
+    // ── aviso suave de riesgo (toast, sin overlay) ──
+    if(fechaJugada>GRACIA){
+      const enRiesgo = posicionMia()>=15 || S.objetivos.some(o=>{ const ev=evalObjetivo(o); return o.modo==="max" && ev.valor===o.meta; });
+      if(enRiesgo && !S._avisadoSoft){ S._avisadoSoft=true; setTimeout(()=>toast("⚠️ La dirigencia está caliente. Mejorá los números."),900); }
+      if(!enRiesgo) S._avisadoSoft=false;
+    }
+  }
+  // despido directo (overlay de "te echaron" + game over)
+  function ejecutarDespidoDirecto(obj){
+    S.gameover=true; guardar();
+    const ev=evalObjetivo(obj);
+    setTimeout(()=>mostrarDespido(obj, ev), 700);
+  }
+  // ultimátum: aviso fuerte, sin echar (marca _ultimatum)
+  function dispararUltimatum(obj){
+    S._ultimatum=true; S._avisado=true; guardar();
+    setTimeout(()=>mostrarUltimatum(obj), 700);
+  }
+  function mostrarUltimatum(obj){
+    const ov=document.getElementById("despido-overlay");
+    const cuerpo=document.getElementById("despido-cuerpo");
+    document.querySelector("#despido-overlay .head").innerHTML="⏳ ÚLTIMA ADVERTENCIA";
+    document.querySelector("#despido-overlay .head").style.background="var(--foco)";
+    document.querySelector("#despido-overlay .head").style.color="#1a1206";
+    document.querySelector("#despido-overlay .despido-box").style.borderColor="var(--foco)";
+    const btn=document.querySelector("#despido-overlay .foot button");
+    btn.textContent="Lo voy a dar vuelta 💪"; btn.onclick=()=>J.cerrarUltimatum();
+    const reportero=pick(REPORTEROS);
+    cuerpo.innerHTML=`
+      <p style="font-size:14px;color:var(--cal-dim);margin-bottom:14px">${reportero} informa:</p>
+      <p style="font-size:16px;line-height:1.5;margin-bottom:18px">
+        <b style="color:var(--foco)">TENSIÓN:</b> La dirigencia de <b>${S.nombre}</b> le bajó el pulgar al objetivo
+        "<b>${obj.txt}</b>". Banca al DT <b>${S.dt}</b>… por ahora.
+      </p>
+      <p style="font-size:14px;line-height:1.5;color:var(--cal)">
+        <b>Es tu última chance.</b> Si volvés a quedar lejos de un objetivo, te van a echar y perdés todo.
+      </p>
+      <p style="font-size:13px;color:var(--cal-dim);margin-top:12px">${pick([
+        "“Confiamos en el proyecto, pero la paciencia tiene un límite”, dijeron sin mirarlo a los ojos.",
+        "El presidente lo saludó con un apretón de manos demasiado corto.",
+        "La barra ya tiene listo el trapo, por las dudas.",
+      ])}</p>`;
+    ov.classList.add("show");
+  }
+  function cerrarUltimatum(){
+    document.getElementById("despido-overlay").classList.remove("show");
+    // restaurar estilos del overlay para un futuro despido real
+    const head=document.querySelector("#despido-overlay .head");
+    head.innerHTML="🪑 ¡TE ECHARON!"; head.style.background="var(--sangre)"; head.style.color="#fff";
+    document.querySelector("#despido-overlay .despido-box").style.borderColor="var(--sangre)";
+    const btn=document.querySelector("#despido-overlay .foot button");
+    btn.textContent="Empezar de nuevo ↻"; btn.onclick=()=>J.reiniciarTrasDespido();
+    render();
+  }
+  function mostrarDespido(obj, ev){
+    // overlay dramático de despido
+    const ov=document.getElementById("despido-overlay");
+    const cuerpo=document.getElementById("despido-cuerpo");
+    const reportero=pick(REPORTEROS);
+    cuerpo.innerHTML=`
+      <p style="font-size:14px;color:var(--cal-dim);margin-bottom:14px">${reportero} informa:</p>
+      <p style="font-size:16px;line-height:1.5;margin-bottom:18px">
+        <b style="color:var(--sangre)">BOMBA:</b> La dirigencia de <b>${S.nombre}</b> echó al DT
+        <b style="color:var(--foco)">${S.dt}</b> en plena temporada. El objetivo
+        "<b>${obj.txt}</b>" quedó incumplible y no perdonaron.
+      </p>
+      <p style="font-size:13.5px;color:var(--cal-dim)">${frasesDespido()}</p>`;
+    ov.classList.add("show");
+  }
+  function frasesDespido(){
+    return pick([
+      "“Le agradecemos los servicios prestados”, dijeron, mientras le cambiaban la cerradura del vestuario.",
+      "El plantel se enteró por Twitter. Nadie fue a despedirlo.",
+      "Ya negocian con un DT que prometió ascenso, Copa y Champions en la misma frase.",
+      "La barra colgó un trapo nuevo antes de que terminara la conferencia.",
+      "El utilero le pidió que devuelva el buzo antes de irse.",
+    ]);
+  }
+  function reiniciarTrasDespido(){
+    document.getElementById("despido-overlay").classList.remove("show");
+    const nombre=S.nombre;
+    S=nuevoEstado(nombre); rotarMercado(); guardar(); render();
+    toast("🔁 Nueva temporada, nuevo proyecto. ¡A demostrar, "+nombre+"!");
+  }
+
+  /* ── COPA ── */
+  function iniciarCopa(){
+    const top8=tablaOrdenada().slice(0,8).map(([e])=>e);
+    S.copa="cuartos";
+    S.llaves={cuartos:[[top8[0],top8[7]],[top8[3],top8[4]],[top8[1],top8[6]],[top8[2],top8[5]]],semis:[],final:[],campeon:null};
+    S.noticias.unshift({rep:"📰 Diario Olé",fecha:S.fecha,texto:"🏆 ¡LIGA TERMINADA! Los 8 mejores van a la Copa Máster."});
+  }
+  function resolverCruce(eqA,eqB,cb){
+    const esMio=(eqA===S.nombre||eqB===S.nombre);
+    if(esMio){
+      const rival=eqA===S.nombre?eqB:eqA;
+      const bot=botData(rival);
+      const esLocal=eqA===S.nombre;
+      const ali=alineacionActual();
+      const miF=calcularFuerza(ali,S.formacion,S.dt), rivF=fuerzaBot(bot);
+      const jugMios=nombresEnCancha().length?nombresEnCancha():[S.nombre];
+      const arbC = pick(ARBITROS);
+      const localDataC = esLocal ? botData(S.nombre) : bot;
+      const sim=simularPartido({
+        nombreLocal:esLocal?S.nombre:rival, nombreVisita:esLocal?rival:S.nombre,
+        fuerzaLocal:esLocal?miF:rivF, fuerzaVisita:esLocal?rivF:miF,
+        jugLocal:esLocal?jugMios:bot.estrellas, jugVisita:esLocal?bot.estrellas:jugMios,
+        arbitro:arbC, ambienteLocal:1.0 });
+      const ctxC={ estadio:(localDataC.estadio||"un estadio neutral"), aforo:(localDataC.aforo||"—"), arbitro:arbC };
+      reproducirRelato(sim, esLocal?S.nombre:rival, esLocal?rival:S.nombre, S.nombre, ()=>{
+        const gMio=esLocal?sim.golesLocal:sim.golesVisita;
+        const gRiv=esLocal?sim.golesVisita:sim.golesLocal;
+        sim.eventos.forEach(e=>{ if(e.tipo==="gol")S.goleadores[e.jugador]=(S.goleadores[e.jugador]||0)+1; });
+        if(gMio!==gRiv){
+          cb(gMio>gRiv?S.nombre:rival);
+        } else {
+          // EMPATE → tanda de penales animada
+          reproducirPenales(eqA, eqB,
+            eqA===S.nombre?jugMios:bot.estrellas,
+            eqB===S.nombre?jugMios:bot.estrellas,
+            S.nombre, (ganador)=>cb(ganador));
+        }
+      }, false, ctxC);
+    } else {
+      const b1=botData(eqA),b2=botData(eqB);
+      const sim=simularPartido({nombreLocal:eqA,nombreVisita:eqB,fuerzaLocal:fuerzaBot(b1),fuerzaVisita:fuerzaBot(b2),jugLocal:b1.estrellas,jugVisita:b2.estrellas});
+      let g1=sim.golesLocal,g2=sim.golesVisita;
+      // empate entre bots: se define por penales al azar (no se anima)
+      let win = g1!==g2?(g1>g2?eqA:eqB):(R()<.5?eqA:eqB);
+      sim.eventos.forEach(e=>{ if(e.tipo==="gol")S.goleadores[e.jugador]=(S.goleadores[e.jugador]||0)+1; });
+      cb(win);
+    }
+  }
+  function jugarCopa(){
+    if(S.copa==="cuartos"){
+      const part=S.llaves.cuartos.slice(); const gan=[];
+      (function next(i){
+        if(i>=part.length){ S.llaves.semis=[[gan[0],gan[1]],[gan[2],gan[3]]]; S.copa="semis"; guardar(); render(); return; }
+        resolverCruce(part[i][0],part[i][1],(w)=>{ gan.push(w); next(i+1); });
+      })(0);
+    } else if(S.copa==="semis"){
+      const part=S.llaves.semis.slice(); const fin=[];
+      (function next(i){
+        if(i>=part.length){ S.llaves.final=[[fin[0],fin[1]]]; S.copa="final"; guardar(); render(); return; }
+        resolverCruce(part[i][0],part[i][1],(w)=>{ fin.push(w); next(i+1); });
+      })(0);
+    } else if(S.copa==="final"){
+      const [a,b]=S.llaves.final[0];
+      resolverCruce(a,b,(w)=>{
+        S.llaves.campeon=w; S.copa="fin";
+        if(w===S.nombre){ S.plata+=2000; toast("🥇 ¡¡CAMPEÓN DE LA COPA!! (+$2000)"); }
+        else toast("🥈 El campeón fue "+w+". Hasta la próxima.");
+        guardar(); render();
+      });
+    }
+  }
+
+  /* ── MERCADO ── */
+  function rotarMercado(){
+    const enPlantel=new Set(S.plantel.map(j=>j.nombre));
+    const disp=BASE_JUGADORES.filter(j=>!enPlantel.has(j.nombre)).map(j=>({...j}));
+    shuffle(disp);
+    S.mercado=disp.slice(0,6).map(j=>{ j.valor=Math.round(j.valor*pick([.85,.9,1,1.1,1.15])); return j; });
+  }
+  function comprar(i){
+    const j=S.mercado[i]; if(!j)return;
+    if(S.plantel.length>=LIMITE){ toast(`Plantel lleno (${LIMITE} máx). Vendé a alguien.`); return; }
+    if(S.plata<j.valor){ toast(`No te alcanza. Cuesta $${j.valor}, tenés $${S.plata}.`); return; }
+    S.plata-=j.valor; S.plantel.push({...j,moral:100,energia:100,lesionFechas:0});
+    S.mercado.splice(i,1);
+    toast(`✅ Fichaste a ${j.nombre} por $${j.valor}`);
+    guardar(); render();
+  }
+  function vender(i){
+    const j=S.plantel[i]; if(!j)return;
+    S.plata+=j.valor; S.plantel.splice(i,1);
+    toast(`💸 Vendiste a ${j.nombre} por $${j.valor}`);
+    guardar(); render();
+  }
+  function ojearMercado(){
+    if(S.plata<50){ toast("No tenés $50 para ojear."); return; }
+    S.plata-=50; rotarMercado(); toast("🔍 Mercado renovado (-$50)"); guardar(); render();
+  }
+
+  function tablaOrdenada(){
+    return Object.entries(S.tabla).sort((a,b)=>
+      b[1].pts-a[1].pts || (b[1].gf-b[1].gc)-(a[1].gf-a[1].gc) || b[1].gf-a[1].gf);
+  }
+
+  /* ════════════════════════ RELATO ANIMADO ════════════════════════ */
+  function reproducirRelato(sim, nomLocal, nomVisita, miNombre, onFin, esClasico, ctx){
+    ctx = ctx || {};
+    const ov=document.getElementById("relato-overlay");
+    const feed=document.getElementById("relato-feed");
+    const mRes=document.getElementById("m-res");
+    const mMin=document.getElementById("m-minuto");
+    const box=ov.querySelector(".relato-box");
+    document.getElementById("m-local").textContent=nomLocal;
+    document.getElementById("m-visita").textContent=nomVisita;
+    document.getElementById("m-local").classList.toggle("mio",nomLocal===miNombre);
+    document.getElementById("m-visita").classList.toggle("mio",nomVisita===miNombre);
+    // banner de clásico
+    let banner=document.getElementById("clasico-banner");
+    if(esClasico){
+      if(!banner){ banner=document.createElement("div"); banner.id="clasico-banner"; box.insertBefore(banner, box.firstChild); }
+      banner.className="clasico-banner";
+      banner.innerHTML="🔥 CLÁSICO 🔥 · se juega algo más que tres puntos";
+      banner.style.display="block";
+    } else if(banner){ banner.style.display="none"; }
+    feed.innerHTML=""; mRes.textContent="0 - 0";
+    mMin.textContent=esClasico?"¡Clima de clásico en las tribunas!":"Suena el himno...";
+    document.getElementById("btn-cerrar-relato").classList.add("hidden");
+    document.getElementById("btn-saltar").classList.remove("hidden");
+    ov.classList.add("show");
+    relato.saltar=false;
+
+    // ── apertura: estadio + árbitro ──
+    if(ctx.estadio){
+      const ape=document.createElement("div");
+      ape.className="ev ev-ambiente";
+      ape.innerHTML=`🏟️ Se juega en <b>${ctx.estadio}</b>${ctx.aforo?` · ${ctx.aforo} personas`:""}. ¡A reventar!`;
+      feed.appendChild(ape);
+    }
+    if(ctx.arbitro){
+      const a=ctx.arbitro;
+      const arbDiv=document.createElement("div");
+      arbDiv.className="ev ev-arbitro";
+      arbDiv.innerHTML=`${a.emoji||"👨‍⚖️"} Dirige <b>${a.nombre}</b>. <span style="color:var(--cal-dim)">${a.frase}</span>`;
+      feed.appendChild(arbDiv);
+      relato._arb=a;
+    }
+    feed.scrollTop=feed.scrollHeight;
+
+    const evs=sim.eventos; let i=0;
+    // pool de comentarios de color para interpolar
+    function colorAmbiente(){
+      const cat=pick(["hinchada","clima","banco","relator"]);
+      let txt=pick(F[cat]);
+      // reemplazar {eq} con un equipo al azar del partido
+      txt=txt.replace(/{eq}/g, R()<.5?nomLocal:nomVisita);
+      return {txt, cat};
+    }
+    function fraseDe(e){
+      const mio = e.equipo===miNombre;
+      const arb=relato._arb;
+      switch(e.tipo){
+        case "gol":
+          if(mio){ const esp=F.golEsp[e.jugador]; return esp?pick(esp):pick(F.gol).replace(/{j}/g,e.jugador); }
+          return pick(F.golRival).replace(/{j}/g,e.jugador).replace(/{eq}/g,e.equipo);
+        case "penal":{
+          let extra="";
+          if(arb && arb.estilo==="VAR" && R()<.6) extra=pick(F.arbVAR).replace(/{arb}/g,arb.nombre)+" ";
+          return `¡Penal para ${e.equipo}! ${extra}${ (e.convierte?pick(F.penalOk):pick(F.penalFalla)).replace(/{j}/g,e.jugador) }`;
+        }
+        case "chance": return pick(F.chance).replace(/{eq}/g,e.equipo);
+        case "inci": case "incidencia":{
+          let base=pick(F.inci).replace(/{j}/g,e.jugador);
+          if(arb && arb.estilo==="tarjetero" && R()<.5) base=pick(F.arbTarjeta).replace(/{arb}/g,arb.nombre);
+          return base;
+        }
+        case "roja": return pick(F.roja).replace(/{j}/g,e.jugador)+` (${e.equipo})`;
+        case "lesion": return pick(F.lesion).replace(/{j}/g,e.jugador)+` (${e.equipo})`;
+        default: return pick(F.medio);
+      }
+    }
+    function clase(e){
+      if(e.tipo==="gol") return e.equipo===miNombre?"gol":"gol-rival";
+      if(e.tipo==="penal") return e.convierte?(e.equipo===miNombre?"gol":"gol-rival"):"penal";
+      if(e.tipo==="roja") return "roja"; if(e.tipo==="lesion") return "lesion";
+      return "";
+    }
+    function paso(){
+      if(relato.saltar){ // mostrar todo de una
+        while(i<evs.length){ pintar(evs[i]); i++; }
+        terminar(); return;
+      }
+      if(i>=evs.length){ terminar(); return; }
+      const e=evs[i++];
+      pintar(e);
+      relato.timer=setTimeout(paso, 850);
+    }
+    function pintar(e){
+      mMin.textContent=`▶ Minuto ${e.minuto}'`;
+      const [a,b]=e.marcador; const nuevo=`${a} - ${b}`;
+      const huboGol = mRes.textContent!==nuevo && (e.tipo==="gol"||(e.tipo==="penal"&&e.convierte));
+      mRes.textContent=nuevo;
+      if(huboGol){ mRes.classList.remove("late"); void mRes.offsetWidth; mRes.classList.add("late"); }
+      // los "medio" se transforman en comentario de color (o se omiten a veces)
+      if(e.tipo==="medio"){
+        if(R()<.45) return; // a veces nada, para no saturar
+        const {txt,cat}=colorAmbiente();
+        const div=document.createElement("div");
+        div.className="ev ev-"+cat;
+        div.innerHTML=`<span class="min">${e.minuto}'</span>${txt}`;
+        feed.appendChild(div); feed.scrollTop=feed.scrollHeight;
+        return;
+      }
+      const div=document.createElement("div");
+      div.className="ev "+clase(e);
+      div.innerHTML=`<span class="min">${e.minuto}'</span>${fraseDe(e)}`;
+      feed.appendChild(div); feed.scrollTop=feed.scrollHeight;
+    }
+    function terminar(){
+      clearTimeout(relato.timer);
+      mMin.textContent="🏁 Final del partido";
+      const gl=sim.golesLocal, gv=sim.golesVisita;
+      const div=document.createElement("div");
+      div.className="ev"; div.style.borderLeftColor="var(--foco)"; div.style.fontWeight="700";
+      div.innerHTML=`🏁 FINAL: ${nomLocal} ${gl} - ${gv} ${nomVisita}`;
+      feed.appendChild(div); feed.scrollTop=feed.scrollHeight;
+      document.getElementById("btn-saltar").classList.add("hidden");
+      document.getElementById("btn-cerrar-relato").classList.remove("hidden");
+      relato._onFin=onFin;
+    }
+    relato._paso=paso;            // referencia para poder saltar
+    relato.timer=setTimeout(paso, 700);
+  }
+  function saltarRelato(){
+    relato.saltar=true;
+    if(relato.timer)clearTimeout(relato.timer);
+    if(relato._paso) relato._paso();   // relanza: el flag saltar hace que pinte todo y termine
+  }
+  function cerrarRelato(){
+    document.getElementById("relato-overlay").classList.remove("show");
+    const fn=relato._onFin; relato._onFin=null;
+    if(fn) fn();
+  }
+
+  /* ════════════════════════ TANDA DE PENALES ANIMADA ════════════════════════ */
+  function reproducirPenales(eqA, eqB, jugA, jugB, miNombre, onGanador){
+    const ov=document.getElementById("penales-overlay");
+    const feed=document.getElementById("penales-feed");
+    document.getElementById("p-eqA").textContent=eqA;
+    document.getElementById("p-eqB").textContent=eqB;
+    document.getElementById("p-eqA").classList.toggle("mio",eqA===miNombre);
+    document.getElementById("p-eqB").classList.toggle("mio",eqB===miNombre);
+    document.getElementById("p-marcA").textContent="0";
+    document.getElementById("p-marcB").textContent="0";
+    feed.innerHTML="";
+    document.getElementById("p-titulo").textContent="⚡ ¡VAMOS A LOS PENALES!";
+    document.getElementById("btn-cerrar-penales").classList.add("hidden");
+    ov.classList.add("show");
+
+    // armar la tanda completa de antemano (lógica)
+    const jA = jugA.length?jugA:[eqA], jB=jugB.length?jugB:[eqB];
+    const serie=[]; // {equipo:'A'/'B', jugador, convierte}
+    let scA=0, scB=0, ronda=0;
+    // 5 rondas base, alternando
+    function tiro(equipo, lista, idx){
+      const conv = R() < 0.72;
+      return {equipo, jugador:lista[idx%lista.length], convierte:conv};
+    }
+    for(let i=0;i<5;i++){ serie.push(tiro("A",jA,i)); serie.push(tiro("B",jB,i)); }
+    // calcular si hace falta muerte súbita
+    function recalc(){ scA=0;scB=0; serie.forEach(t=>{ if(t.convierte){ t.equipo==="A"?scA++:scB++; } }); }
+    recalc();
+    // si empatan tras 5, muerte súbita hasta que se rompa
+    let md=5;
+    while(scA===scB){
+      serie.push(tiro("A",jA,md)); serie.push(tiro("B",jB,md));
+      recalc(); md++;
+      if(md>20)break; // tope de seguridad
+    }
+    // recortar muerte súbita al punto donde se decide (para no patear de más)
+    // reconstruyo mostrando ronda a ronda y corto cuando es matemático
+    const ganador = scA>scB?eqA:eqB;
+
+    // reproducción animada
+    let i=0, vA=0, vB=0, rondaNum=1, ladoA=true;
+    function paso(){
+      if(i>=serie.length){ terminar(); return; }
+      const t=serie[i++];
+      const esA = t.equipo==="A";
+      const eqNom = esA?eqA:eqB;
+      const conv = t.convierte;
+      if(conv){ esA?vA++:vB++; }
+      document.getElementById("p-marcA").textContent=vA;
+      document.getElementById("p-marcB").textContent=vB;
+      const frase = conv ? pick(F.penalOk).replace(/{j}/g,t.jugador) : pick(F.penalFalla).replace(/{j}/g,t.jugador);
+      const div=document.createElement("div");
+      div.className="ev "+(conv?(eqNom===miNombre?"gol":""):"penal");
+      div.innerHTML=`<span style="font-size:16px">${conv?"✅":"❌"}</span> <b>${t.jugador}</b> <span style="color:var(--cal-dim);font-size:12px">(${eqNom})</span> — ${frase}`;
+      feed.appendChild(div); feed.scrollTop=feed.scrollHeight;
+      if(conv){ const m=document.getElementById(esA?"p-marcA":"p-marcB"); m.classList.remove("late"); void m.offsetWidth; m.classList.add("late"); }
+
+      // ¿ya está decidido matemáticamente? (en rondas 1-5)
+      const tirosA = serie.slice(0,i).filter(x=>x.equipo==="A").length;
+      const tirosB = serie.slice(0,i).filter(x=>x.equipo==="B").length;
+      const restA = Math.max(0,5-tirosA), restB=Math.max(0,5-tirosB);
+      if(i<10){
+        if(vA > vB+restB || vB > vA+restA){ relato.timer=setTimeout(terminar,900); return; }
+      }
+      relato.timer=setTimeout(paso, 1000);
+    }
+    function terminar(){
+      clearTimeout(relato.timer);
+      document.getElementById("p-titulo").textContent="🏁 Tanda definida";
+      const div=document.createElement("div");
+      div.className="ev"; div.style.borderLeftColor="var(--foco)"; div.style.fontWeight="700";
+      div.innerHTML=`🏅 ${eqA} ${vA} - ${vB} ${eqB} en penales → ¡${vA>vB?eqA:eqB}!`;
+      feed.appendChild(div); feed.scrollTop=feed.scrollHeight;
+      const btn=document.getElementById("btn-cerrar-penales");
+      btn.classList.remove("hidden");
+      penalesOnFin=()=>onGanador(vA>vB?eqA:eqB);
+    }
+    relato.timer=setTimeout(paso, 900);
+  }
+  let penalesOnFin=null;
+  function cerrarPenales(){
+    document.getElementById("penales-overlay").classList.remove("show");
+    const fn=penalesOnFin; penalesOnFin=null;
+    if(fn)fn();
+  }
+
+  /* ════════════════════════ RENDER ════════════════════════ */
+  function render(){
+    document.getElementById("club-nombre").textContent=S.nombre;
+    const dt=DTS[S.dt]||{atk:0,def:0};
+    document.getElementById("club-dt").textContent=`DT: ${S.dt} · ATK ${signo(dt.atk)} DEF ${signo(dt.def)}`;
+    document.getElementById("stat-plata").textContent="$"+S.plata;
+    document.getElementById("stat-fecha").textContent=(S.fecha>MAX?"FIN":S.fecha)+"/"+MAX;
+    document.getElementById("stat-pos").textContent=posicionMia()+"º";
+
+    renderTabla(); renderObjetivos(); renderPlantel(); renderMercado();
+    renderGoleadores(); renderPrensa(); renderCopa(); renderPizarra(); renderFuerza();
+
+    const btn=document.getElementById("btn-jugar");
+    if(S.gameover){ btn.disabled=true; btn.textContent="🪑 Te echaron"; }
+    else if(S.fecha>MAX){ btn.disabled=true; btn.textContent="🏁 Liga terminada — jugá la Copa"; }
+    else { btn.disabled=false; btn.textContent="▶ Jugar la fecha"; }
+
+    // badge copa
+    const tabCopa=document.querySelector('[data-tab="copa"]');
+    tabCopa.innerHTML="🏆 Copa"+((S.copa&&S.copa!=="fin")?' <span class="badge">!</span>':"");
+    // badge prensa: noticias sin leer
+    const tabPrensa=document.querySelector('[data-tab="prensa"]');
+    const noLeidas=S._prensaNoLeidas||0;
+    tabPrensa.innerHTML="📰 Prensa"+(noLeidas>0?` <span class="badge">${noLeidas>9?"9+":noLeidas}</span>`:"");
+  }
+  const signo=x=>(x>=0?"+":"")+x;
+
+  function renderTabla(){
+    const tb=document.getElementById("tabla-body"); tb.innerHTML="";
+    tablaOrdenada().forEach(([eq,st],idx)=>{
+      const tr=document.createElement("tr");
+      if(eq===S.nombre)tr.className="mio";
+      if(idx<8)tr.classList.add("zona-copa");
+      const dg=st.gf-st.gc;
+      const esClasico = S.clasicos && S.clasicos.includes(eq);
+      const tag = esClasico?'<span class="clasico-tag">CLÁSICO</span>':'';
+      tr.innerHTML=`<td><span class="pos-num">${idx+1}</span></td><td>${eq===S.nombre?"▸ ":""}${eq}${tag}</td>
+        <td><b>${st.pts}</b></td><td>${st.pj}</td><td>${st.gf}</td><td>${st.gc}</td><td>${signo(dg)}</td>`;
+      tb.appendChild(tr);
+    });
+  }
+  function renderObjetivos(){
+    const box=document.getElementById("objetivos-box"); box.innerHTML="";
+    // panel de clásicos arriba
+    if(S.clasicos && S.clasicos.length){
+      const cl=document.createElement("div");
+      cl.style.cssText="margin-bottom:14px;padding:12px 14px;border-radius:11px;background:rgba(255,210,63,.06);border:1px solid rgba(255,210,63,.25)";
+      cl.innerHTML=`<div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--foco-dim);margin-bottom:6px">🔥 Tus clásicos de la temporada</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          ${S.clasicos.map(c=>`<span style="font-weight:700;font-size:13.5px;color:var(--foco)">${c}</span>`).join('<span style="color:var(--cal-dim)">·</span>')}
+        </div>`;
+      box.appendChild(cl);
+    }
+    // objetivos dinámicos
+    S.objetivos.forEach(o=>{
+      const ev=evalObjetivo(o);
+      let detalle;
+      const meta=o.meta;
+      switch(o.tipo){
+        case "posicion": detalle=`Vas ${ev.valor}º · piden top ${meta}`; break;
+        case "derrotas": detalle=`${ev.valor} derrotas · máximo ${meta}`; break;
+        case "golesAfavor": detalle=`${ev.valor} goles · meta ${meta}`; break;
+        case "ganados": detalle=`${ev.valor} ganados · meta ${meta}`; break;
+        case "clasicosGanados": detalle=`${ev.valor} clásico(s) ganado(s) · meta ${meta}`; break;
+        case "clasicosPerdidos": detalle=`${ev.valor} clásico(s) perdido(s) · máximo ${meta}`; break;
+        case "localPerdidos": detalle=`${ev.valor} caídas de local · máximo ${meta}`; break;
+        case "vallaInvicta": detalle=`${ev.valor} vallas invictas · meta ${meta}`; break;
+        default: detalle="";
+      }
+      const estado = ev.fallado?"riesgo":(ev.ok?"ok":"riesgo");
+      const icono = ev.fallado?"✗":(ev.ok?"✓":"…");
+      const div=document.createElement("div");
+      div.className="objetivo "+(ev.ok&&!ev.fallado?"ok":"riesgo");
+      div.innerHTML=`<div class="ring">${icono}</div><div class="txt"><b>${o.txt}</b><span>${detalle}</span></div>`;
+      box.appendChild(div);
+    });
+  }
+  function barra(cls,val){
+    const low=val<35?" low":"";
+    return `<span class="barra ${cls}${low}"><span style="width:${val}%"></span></span>`;
+  }
+  function renderPlantel(){
+    const list=document.getElementById("plantel-list"); list.innerHTML="";
+    if(!S.plantel.length){ list.innerHTML='<div class="empty">Sin jugadores. ¡Andá al mercado a fichar!</div>'; return; }
+    S.plantel.forEach((j,i)=>{
+      const card=document.createElement("div"); card.className="jug-card";
+      const les = j.lesionFechas>0?`<span class="lesion-pill">🤕 ${j.lesionFechas} fecha${j.lesionFechas>1?"s":""}</span>`:"";
+      card.innerHTML=`
+        <span class="pos-tag pos-${j.pos}">${j.pos}</span>
+        <div>
+          <div class="jug-nombre">${j.nombre} ${les}</div>
+          <div class="jug-sub">
+            <span class="mini-stat">⚔️ ${j.atk}</span>
+            <span class="mini-stat">🛡️ ${j.def}</span>
+            <span class="mini-stat">😤 ${barra("b-moral",j.moral??100)}</span>
+          </div>
+        </div>
+        <button class="btn danger" style="padding:6px 11px" onclick="J.vender(${i})">$${j.valor}</button>`;
+      list.appendChild(card);
+    });
+  }
+  function renderMercado(){
+    const list=document.getElementById("mercado-list"); list.innerHTML="";
+    (S.mercado||[]).forEach((j,i)=>{
+      const card=document.createElement("div"); card.className="jug-card";
+      const caro=S.plata<j.valor;
+      card.innerHTML=`
+        <span class="pos-tag pos-${j.pos}">${j.pos}</span>
+        <div>
+          <div class="jug-nombre">${j.nombre}</div>
+          <div class="jug-sub"><span class="mini-stat">⚔️ ${j.atk}</span><span class="mini-stat">🛡️ ${j.def}</span></div>
+        </div>
+        <button class="btn ${caro?'':'primary'}" style="padding:7px 13px" onclick="J.comprar(${i})">
+          <span class="precio ${caro?'no':''}">$${j.valor}</span></button>`;
+      list.appendChild(card);
+    });
+  }
+  function renderGoleadores(){
+    const tb=document.getElementById("goleadores-body"); tb.innerHTML="";
+    const ord=Object.entries(S.goleadores).sort((a,b)=>b[1]-a[1]).slice(0,30);
+    if(!ord.length){ tb.innerHTML='<tr><td colspan="4" class="empty">Todavía no hay goles. ¡A jugar!</td></tr>'; return; }
+    ord.forEach(([nom,g],i)=>{
+      const mio=S.plantel.some(j=>j.nombre===nom);
+      const eq = mio?S.nombre:(EQUIPOS_BOT.find(b=>b.estrellas.includes(nom))?.nombre||"—");
+      const tr=document.createElement("tr"); if(mio)tr.className="mio";
+      tr.innerHTML=`<td>${i+1}</td><td>${nom}</td><td style="text-align:left;color:var(--cal-dim)">${eq}</td><td><b>${g}</b></td>`;
+      tb.appendChild(tr);
+    });
+  }
+  function renderPrensa(){
+    const feed=document.getElementById("prensa-feed"); feed.innerHTML="";
+    if(!S.noticias.length){ feed.innerHTML='<div class="empty">Sin noticias aún. Jugá una fecha y se viene el quilombo.</div>'; return; }
+    S.noticias.forEach(n=>{
+      const div=document.createElement("div"); div.className="noticia-card";
+      div.innerHTML=`<div class="head"><span class="rep">${n.rep}</span><span class="fecha-tag">FECHA ${n.fecha}</span></div><div class="cuerpo">${n.texto}</div>`;
+      feed.appendChild(div);
+    });
+  }
+
+  /* ── PIZARRA TÁCTICA con drag & drop ── */
+  function renderFuerza(){
+    const ali=alineacionActual();
+    const f=calcularFuerza(ali,S.formacion,S.dt);
+    const box=document.getElementById("fuerza-box");
+    const barAtk=clamp(f.atk/130*100,0,100), barDef=clamp(f.def/130*100,0,100);
+    box.innerHTML=`
+      <div style="margin-bottom:14px">
+        <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px"><span style="color:var(--cal-dim);letter-spacing:1px">ATAQUE</span><b style="font-family:'Space Mono';color:#fca5a5">${f.atk.toFixed(0)}</b></div>
+        <div class="barra" style="width:100%;height:9px"><span style="width:${barAtk}%;background:linear-gradient(90deg,#e23b3b,#fca5a5)"></span></div>
+      </div>
+      <div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px"><span style="color:var(--cal-dim);letter-spacing:1px">DEFENSA</span><b style="font-family:'Space Mono';color:#6ee7b7">${f.def.toFixed(0)}</b></div>
+        <div class="barra" style="width:100%;height:9px"><span style="width:${barDef}%;background:linear-gradient(90deg,#10b981,#6ee7b7)"></span></div>
+      </div>
+      ${f.lesionados?`<p style="margin-top:12px;font-size:12px;color:#fca5a5">🤕 ${f.lesionados} lesionado(s) en cancha bajan el rendimiento.</p>`:""}`;
+    const dtBox=document.getElementById("dt-box");
+    const dt=DTS[S.dt];
+    dtBox.innerHTML=`<div style="font-size:14px"><b style="color:var(--foco)">${S.dt}</b> · estilo ${dt.estilo}<br>
+      <span style="font-size:12.5px;color:var(--cal-dim)">Bonus al equipo: ATK ${signo(dt.atk)} · DEF ${signo(dt.def)}</span></div>`;
+    renderCampania();
+  }
+  function renderCampania(){
+    const box=document.getElementById("campania-box");
+    if(!box)return;
+    const mi=S.tabla[S.nombre]||{pts:0,pj:0,gf:0,gc:0};
+    const g=S._ganados||0, e=S._empatados||0, p=S._derrotas||0;
+    const racha=S.racha||[];
+    const colRes={G:"#34d399",E:"#fcd34d",P:"#e23b3b"};
+    const pildoras = racha.length
+      ? racha.map(r=>`<span style="display:inline-grid;place-items:center;width:22px;height:22px;border-radius:6px;font-family:'Space Mono';font-weight:700;font-size:11px;color:#0b1410;background:${colRes[r]}">${r}</span>`).join("")
+      : `<span style="color:var(--cal-dim);font-size:12px">Sin partidos aún</span>`;
+    // goleador del equipo
+    let topGol=null, topG=0;
+    Object.entries(S.goleadores).forEach(([n,gg])=>{ if(S.plantel.some(j=>j.nombre===n)&&gg>topG){topG=gg;topGol=n;} });
+    const stat=(v,l,c)=>`<div style="text-align:center;flex:1"><div style="font-family:'Space Mono';font-weight:700;font-size:20px;color:${c||'var(--cal)'}">${v}</div><div style="font-size:9.5px;letter-spacing:1px;text-transform:uppercase;color:var(--cal-dim);margin-top:2px">${l}</div></div>`;
+    box.innerHTML=`
+      <div style="display:flex;gap:6px;margin-bottom:14px">
+        ${stat(g,"Ganados","#34d399")}${stat(e,"Empat.","#fcd34d")}${stat(p,"Perdidos","#e23b3b")}
+      </div>
+      <div style="display:flex;gap:6px;margin-bottom:14px">
+        ${stat(mi.gf,"Goles +")}${stat(mi.gc,"Goles −")}${stat(signo(mi.gf-mi.gc),"Dif.","var(--foco)")}
+      </div>
+      <div style="margin-bottom:12px">
+        <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--cal-dim);margin-bottom:6px">Últimos resultados</div>
+        <div style="display:flex;gap:5px">${pildoras}</div>
+      </div>
+      ${topGol?`<div style="font-size:13px;padding-top:10px;border-top:1px solid var(--linea-suave)">🥇 Tu goleador: <b style="color:var(--foco)">${topGol}</b> · ${topG} gol${topG>1?"es":""}</div>`:""}
+    `;
+  }
+  function renderPizarra(){
+    // selector de formación
+    const sel=document.getElementById("form-selector"); sel.innerHTML="";
+    Object.keys(FORMACIONES).forEach(f=>{
+      const b=document.createElement("button");
+      b.className="form-opt"+(f===S.formacion?" sel":""); b.textContent=f;
+      b.onclick=()=>{ S.formacion=f; guardar(); render(); };
+      sel.appendChild(b);
+    });
+    const form=FORMACIONES[S.formacion];
+    document.getElementById("form-desc").textContent=`${form.desc} · Bonus ATK ${signo(form.atk)} / DEF ${signo(form.def)}`;
+
+    // cancha
+    const cancha=document.getElementById("cancha");
+    cancha.innerHTML=dibujarLineasCancha();
+    const asign=S.alineacion[S.formacion]||{};
+    form.slots.forEach((slot,i)=>{
+      const [xr,yr]=form.coords[i];
+      const spot=document.createElement("div");
+      spot.className="slot-spot"; spot.dataset.slotIdx=i; spot.dataset.slot=slot;
+      spot.style.cssText=`position:absolute;left:${xr*100}%;top:${yr*100}%;transform:translate(-50%,-50%);
+        width:62px;height:62px;border-radius:50%;display:grid;place-items:center;text-align:center;
+        border:2px dashed var(--linea-suave);background:rgba(0,0,0,.2);cursor:pointer;transition:.12s`;
+      const nom=asign[i];
+      const jug=nom?S.plantel.find(j=>j.nombre===nom&&j.lesionFechas<=0):null;
+      const auto=!jug ? alineacionActual().find(r=>r.idx===i)?.jugador : null;
+      const colores={POR:"#3b82f6",DEF:"#10b981",MED:"#ffd23f",DEL:"#e23b3b"};
+      if(jug){
+        spot.style.border=`2px solid ${colores[slot]}`; spot.style.background="rgba(0,0,0,.45)";
+        spot.innerHTML=`<div style="font-size:9px;line-height:1.1"><b style="font-size:10px">${jug.nombre.split(' ')[0]}</b><br><span style="color:var(--cal-dim);font-family:'Space Mono';font-size:8px">${slot}</span></div>`;
+      } else if(auto){
+        spot.style.border=`2px dashed ${colores[slot]}88`;
+        spot.innerHTML=`<div style="font-size:8px;line-height:1.1;opacity:.65"><b>${auto.nombre.split(' ')[0]}</b><br><span style="font-family:'Space Mono';font-size:7px">auto</span></div>`;
+      } else {
+        spot.innerHTML=`<span style="font-family:'Space Mono';font-size:10px;color:var(--cal-dim)">${slot}</span>`;
+      }
+      // drop
+      spot.ondragover=e=>{ e.preventDefault(); spot.style.borderColor="var(--foco)"; };
+      spot.ondragleave=()=>{ render(); };
+      spot.ondrop=e=>{ e.preventDefault(); const nombre=e.dataTransfer.getData("text"); asignarA(i,nombre); };
+      spot.onclick=()=>{ if(jug){ quitarDe(i); } };
+      cancha.appendChild(spot);
+    });
+
+    // banco
+    const banco=document.getElementById("banco-chips"); banco.innerHTML="";
+    const enCancha=new Set(Object.values(asign).filter(Boolean));
+    if(!S.plantel.length){ banco.innerHTML='<div class="empty" style="padding:14px">Sin jugadores para ubicar.</div>'; }
+    S.plantel.forEach(j=>{
+      const chip=document.createElement("div");
+      const lesionado=j.lesionFechas>0;
+      chip.className="ficha-banco"+(lesionado?" lesionado":"");
+      chip.draggable=!lesionado;
+      chip.innerHTML=`<span class="pos-tag pos-${j.pos}" style="margin-right:6px">${j.pos}</span>${j.nombre.split(' ')[0]}${lesionado?' 🤕':''}`;
+      if(enCancha.has(j.nombre)) chip.style.opacity=.4;
+      chip.ondragstart=e=>{ e.dataTransfer.setData("text",j.nombre); chip.classList.add("dragging"); };
+      chip.ondragend=()=>chip.classList.remove("dragging");
+      banco.appendChild(chip);
+    });
+  }
+  function dibujarLineasCancha(){
+    return `<svg viewBox="0 0 300 400" style="position:absolute;inset:0;width:100%;height:100%" preserveAspectRatio="none">
+      <rect x="8" y="8" width="284" height="384" fill="none" stroke="var(--linea)" stroke-width="1.5"/>
+      <line x1="8" y1="200" x2="292" y2="200" stroke="var(--linea)" stroke-width="1.5"/>
+      <circle cx="150" cy="200" r="42" fill="none" stroke="var(--linea)" stroke-width="1.5"/>
+      <circle cx="150" cy="200" r="3" fill="var(--linea)"/>
+      <rect x="95" y="8" width="110" height="50" fill="none" stroke="var(--linea)" stroke-width="1.5"/>
+      <rect x="95" y="342" width="110" height="50" fill="none" stroke="var(--linea)" stroke-width="1.5"/>
+    </svg>`;
+  }
+  function asignarA(slotIdx,nombre){
+    if(!S.alineacion[S.formacion])S.alineacion[S.formacion]={};
+    const a=S.alineacion[S.formacion];
+    // sacar a ese jugador de cualquier otro slot
+    for(const k in a){ if(a[k]===nombre)delete a[k]; }
+    a[slotIdx]=nombre;
+    guardar(); render();
+  }
+  function quitarDe(slotIdx){
+    if(S.alineacion[S.formacion]) delete S.alineacion[S.formacion][slotIdx];
+    guardar(); render();
+  }
+
+  /* ── COPA RENDER ── */
+  function renderCopa(){
+    const c=document.getElementById("copa-content");
+    if(!S.copa){
+      c.innerHTML=`<div class="empty">La Copa Máster arranca cuando termine la liga.<br>Los 8 primeros clasifican.</div>`;
+      return;
+    }
+    const ll=S.llaves;
+    const lado=(eq,gol,gana)=>`<div class="lado ${eq===S.nombre?'mio':''} ${gana?'gana':''}">${eq||'???'}${gol!=null?`<span class="gol">${gol}</span>`:''}</div>`;
+    const llave=(par)=>{ if(!par)return `<div class="llave">${lado('')}${lado('')}</div>`;
+      return `<div class="llave">${lado(par[0])}${lado(par[1])}</div>`; };
+    let html=`<div class="bracket">
+      <div class="bracket-col">
+        ${llave(ll.cuartos[0])}${llave(ll.cuartos[1])}${llave(ll.cuartos[2])}${llave(ll.cuartos[3])}
+      </div>
+      <div class="bracket-col">
+        ${llave(ll.semis[0])}${llave(ll.semis[1])}
+      </div>
+      <div class="bracket-col final-col">
+        ${llave(ll.final[0])}
+      </div>
+    </div>`;
+    if(ll.campeon){
+      html+=`<div class="campeon-box"><div class="copa">🏆</div><div class="nom">${ll.campeon}</div>
+        <div style="color:var(--cal-dim);margin-top:4px">Campeón de la Copa Máster</div></div>`;
+    }
+    let btnTxt={cuartos:"▶ Jugar Cuartos de Final",semis:"▶ Jugar Semifinales",final:"▶ Jugar la Gran Final"}[S.copa];
+    if(btnTxt) html+=`<button class="btn primary big" style="margin-top:18px;width:100%;justify-content:center" onclick="J.jugarCopa()">${btnTxt}</button>`;
+    c.innerHTML=html;
+  }
+
+  /* ── DIALOGOS ── */
+  let dlgCb=null, dlgExtraCb=null;
+  function dialogo(titulo,texto,valor,cb,extra){
+    document.getElementById("dlg-titulo").textContent=titulo;
+    document.getElementById("dlg-texto").textContent=texto;
+    const inp=document.getElementById("dlg-input"); inp.value=valor||"";
+    const extraBtn=document.getElementById("dlg-extra");
+    if(extra){ extraBtn.classList.remove("hidden"); extraBtn.textContent=extra.label||"🎲 Sortear"; dlgExtraCb=extra.cb; }
+    else { extraBtn.classList.add("hidden"); dlgExtraCb=null; }
+    document.getElementById("dialogo-bg").classList.add("show");
+    setTimeout(()=>inp.focus(),50);
+    dlgCb=cb;
+    inp.onkeydown=e=>{ if(e.key==="Enter")confirmarDialogo(); };
+  }
+  function dialogoExtra(){ if(dlgExtraCb) dlgExtraCb(); }
+  function cerrarDialogo(){ document.getElementById("dialogo-bg").classList.remove("show"); document.getElementById("dlg-extra").classList.add("hidden"); dlgCb=null; dlgExtraCb=null; }
+  function confirmarDialogo(){ const v=document.getElementById("dlg-input").value.trim(); const cb=dlgCb; cerrarDialogo(); if(cb)cb(v); }
+
+  function cambiarNombre(){
+    dialogo("Cambiar nombre","¿Cómo se llama tu equipo?",S.nombre,(v)=>{
+      if(!v)return; const viejo=S.nombre;
+      if(S.tabla[viejo]){ S.tabla[v]=S.tabla[viejo]; delete S.tabla[viejo]; }
+      S.fixture=S.fixture.map(f=>f===viejo?v:f);
+      S.nombre=v; guardar(); render(); toast("✅ Equipo: "+v);
+    });
+  }
+  function reiniciar(){
+    dialogo("Reiniciar liga","Esto borra todo y empieza de cero. Escribí el nombre de tu nuevo equipo:",S.nombre,(v)=>{
+      const nombre=v||"Pilar FC";
+      S=nuevoEstado(nombre); rotarMercado(); guardar(); render();
+      toast("🟥 Liga reiniciada. ¡Suerte, "+nombre+"!");
+    });
+  }
+  function elegirEstadio(despues){
+    dialogo("🏟️ Tu estadio","¿Cómo se llama tu cancha? Escribila o sorteá una con onda.",
+      S.estadio||"el Coloso del Barrio",
+      (v)=>{
+        if(v){ S.estadio=v;
+          // si el nombre vino de un sorteo, ya tiene aforo; si no, le dejamos uno medio
+          if(!S._aforoSorteado){ S.aforo=S.aforo||"18.000"; }
+          guardar(); render(); toast("🏟️ Tu cancha: "+v);
+        }
+        S._aforoSorteado=false;
+        if(despues)despues();
+      },
+      { label:"🎲 Sortear", cb:()=>{
+        const e=pick(ESTADIOS_RANDOM);
+        document.getElementById("dlg-input").value=e.nombre;
+        S.aforo=e.aforo; S._aforoSorteado=true;
+      }});
+  }
+
+  let toastT=null;
+  function toast(msg){
+    const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show");
+    clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove("show"),2600);
+  }
+
+  /* ── TABS ── */
+  function irATab(tab){
+    document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("activa", x.dataset.tab===tab));
+    tabActual=tab;
+    document.querySelectorAll(".tab-panel").forEach(p=>p.classList.toggle("hidden",p.dataset.panel!==tab));
+    if(tab==="prensa" && S){ S._prensaNoLeidas=0; guardar();
+      const tabPrensa=document.querySelector('[data-tab="prensa"]'); if(tabPrensa)tabPrensa.innerHTML="📰 Prensa"; }
+  }
+  function initTabs(){
+    document.querySelectorAll(".tab").forEach(t=>{
+      t.onclick=()=>irATab(t.dataset.tab);
+    });
+  }
+
+  /* ── INIT ── */
+  function init(){
+    initTabs();
+    if(!cargar()){
+      S=nuevoEstado("Pilar FC"); rotarMercado(); guardar();
+      render();
+      setTimeout(()=>dialogo("¡Bienvenido, Mánager!","Tu club arranca sin jugadores. Ponele nombre y después elegí tu cancha.","Pilar FC",(v)=>{
+        if(v){ const viejo=S.nombre; if(S.tabla[viejo]){S.tabla[v]=S.tabla[viejo];delete S.tabla[viejo];}
+          S.fixture=S.fixture.map(f=>f===viejo?v:f); S.nombre=v; }
+        guardar(); render();
+        // ahora elegir estadio, y al cerrar ir al mercado
+        elegirEstadio(()=>{
+          irATab("mercado");
+          toast("🛒 Fichá jugadores para armar tu equipo. Tenés $"+S.plata);
+        });
+      }),400);
+    } else {
+      if(!S.mercado)rotarMercado();
+      render();
+    }
+  }
+
+  return { init, jugarFecha, comprar, vender, ojearMercado, jugarCopa,
+           cambiarNombre, reiniciar, saltarRelato, cerrarRelato, cerrarPenales,
+           cerrarDialogo, confirmarDialogo, reiniciarTrasDespido, cerrarUltimatum,
+           elegirEstadio, dialogoExtra };
+})();
+
+document.addEventListener("DOMContentLoaded", J.init);
+</script>
+</body>
+</html>
